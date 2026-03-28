@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: sahaya
+    env: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: DRIVER_PIN
+        generateValue: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: NODE_ENV
+        value: production

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="manifest" href="manifest.json">
+
+  <title>Sahaya – Bloodbank</title>
+
+  <meta name="description" content="Sahaya provides quick access to emergency services, hospitals, blood banks, and government schemes for rural and semi-urban users.">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-page="blood">
+  <div class="app" role="main">
+    <a href="index.html" class="btn-back">
+      <span>⬅</span> Back to Home
+    </a>
+
+    <header class="app-header" style="margin-bottom:10px;">
+      <div class="app-title">
+        🩸 Blood Banks
+        <span>Nearby centres &amp; availability</span>
+      </div>
+      <div class="language-buttons" role="group" aria-label="Choose language">
+        <button type="button" onclick="setLanguage('en')" aria-pressed="true">English</button>
+        <button type="button" onclick="setLanguage('hi')" aria-pressed="false">हिन्दी</button>
+        <button type="button" onclick="setLanguage('or')" aria-pressed="false">ଓଡିଆ</button>
+      </div>
+    </header>
+
+    <button id="voiceBtn" type="button" class="btn-voice">
+      🔊 Listen instructions
+    </button>
+
+    <section aria-label="Filter blood group" style="margin-top:14px;">
+      <div class="card">
+        <p class="section-title">Choose blood group</p>
+        <select id="groupFilter" onchange="filterBlood()">
+          <option value="all">All groups</option>
+          <option value="A+">A+</option>
+          <option value="A-">A-</option>
+          <option value="B+">B+</option>
+          <option value="B-">B-</option>
+          <option value="O+">O+</option>
+          <option value="O-">O-</option>
+          <option value="AB+">AB+</option>
+          <option value="AB-">AB-</option>
+        </select>
+        <div id="bloodList"></div>
+      </div>
+    </section>
+
+    <script src="script.js"></script>
+    <script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js")
+    .then(() => console.log("Service Worker Registered"))
+    .catch(err => console.log("Service Worker Failed:", err));
+}
+    </script>
+  </div>
+</body>
+</html>

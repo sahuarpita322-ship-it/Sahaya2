@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>LiveShare - Share Your Location</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse"><path d="M 100 0 L 0 0 0 100" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 450px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.98);
+      backdrop-filter: blur(20px);
+      border-radius: 30px;
+      padding: 40px 35px;
+      box-shadow: 0 25px 70px rgba(0, 0, 0, 0.4);
+      animation: slideUp 0.6s ease-out;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(40px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 35px;
+    }
+
+    .logo {
+      width: 100px;
+      height: 100px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 25px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      box-shadow: 0 15px 40px rgba(102, 126, 234, 0.5);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.05);
+      }
+    }
+
+    .logo::before {
+      content: '📍';
+      font-size: 50px;
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      font-size: 15px;
+      color: #718096;
+      font-weight: 500;
+    }
+
+    .input-group {
+      margin-bottom: 25px;
+    }
+
+    label {
+      display: block;
+      font-size: 15px;
+      font-weight: 600;
+      color: #4a5568;
+      margin-bottom: 10px;
+    }
+
+    input {
+      width: 100%;
+      padding: 16px 20px;
+      border: 2px solid #e2e8f0;
+      border-radius: 15px;
+      font-size: 16px;
+      font-family: 'Poppins', sans-serif;
+      transition: all 0.3s ease;
+      background: white;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 18px;
+      border: none;
+      border-radius: 15px;
+      font-size: 17px;
+      font-weight: 700;
+      font-family: 'Poppins', sans-serif;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 15px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-3px);
+      box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
+    }
+
+    .btn-primary:active:not(:disabled) {
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-stop {
+      background: linear-gradient(135deg, #f56565 0%, #c53030 100%);
+      color: white;
+      box-shadow: 0 10px 30px rgba(245, 101, 101, 0.4);
+      display: none;
+    }
+
+    .btn-stop:hover:not(:disabled) {
+      transform: translateY(-3px);
+      box-shadow: 0 15px 40px rgba(245, 101, 101, 0.6);
+    }
+
+    .status-card {
+      background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+      border-radius: 20px;
+      padding: 25px;
+      margin-top: 25px;
+      border: 2px solid #e2e8f0;
+      transition: all 0.3s ease;
+    }
+
+    .status-card.active {
+      border-color: #48bb78;
+      background: linear-gradient(135deg, #f0fff4 0%, #c6f6d5 100%);
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .status-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      margin-right: 12px;
+      animation: pulseDot 2s infinite;
+    }
+
+    @keyframes pulseDot {
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 0.7;
+        transform: scale(1.2);
+      }
+    }
+
+    .status-dot.active {
+      background: #48bb78;
+      box-shadow: 0 0 0 6px rgba(72, 187, 120, 0.3);
+    }
+
+    .status-dot.inactive {
+      background: #f56565;
+      animation: none;
+    }
+
+    .status-text {
+      font-size: 18px;
+      font-weight: 700;
+      color: #2d3748;
+    }
+
+    .coordinates {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 2px solid #e2e8f0;
+    }
+
+    .coord-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      font-size: 15px;
+      padding: 10px;
+      background: white;
+      border-radius: 10px;
+    }
+
+    .coord-label {
+      color: #718096;
+      font-weight: 600;
+    }
+
+    .coord-value {
+      color: #2d3748;
+      font-weight: 700;
+      font-family: 'Courier New', monospace;
+    }
+
+    .info-box {
+      background: linear-gradient(135deg, #edf2f7 0%, #e2e8f0 100%);
+      border-radius: 15px;
+      padding: 15px;
+      margin-top: 20px;
+      font-size: 13px;
+      color: #4a5568;
+      text-align: center;
+      font-weight: 500;
+      border: 1px solid #cbd5e0;
+    }
+
+    .back-btn {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: rgba(255, 255, 255, 0.9);
+      border: none;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      font-size: 24px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      transition: all 0.3s ease;
+      z-index: 10;
+    }
+
+    .back-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    }
+  </style>
+</head>
+
+<body>
+  <a href="index.html" class="back-btn">←</a>
+
+  <div class="container">
+    <div class="card">
+      <div class="header">
+        <div class="logo"></div>
+        <h1>LiveShare</h1>
+        <p class="subtitle">Share your location in real-time</p>
+      </div>
+
+      <div class="input-group">
+        <label for="userName">Your Name</label>
+        <input type="text" id="userName" placeholder="Enter your name" maxlength="20" autocomplete="off">
+      </div>
+
+      <button class="btn btn-primary" id="startBtn" onclick="startSharing()">
+        <span id="btnText">🚀 Start Live Sharing</span>
+      </button>
+
+      <button class="btn btn-stop" id="stopBtn" onclick="stopSharing()">
+        🛑 Stop Sharing
+      </button>
+
+      <div class="status-card" id="statusCard" style="display: none;">
+        <div class="status-indicator">
+          <span class="status-dot inactive" id="statusDot"></span>
+          <span class="status-text" id="statusText">Disconnected</span>
+        </div>
+        <div class="coordinates" id="coordinates"></div>
+      </div>
+
+      <div class="status-card" id="shareLinkCard" style="display: none; margin-top: 15px; border-color: #667eea; background: #ebf4ff;">
+        <p style="font-size: 14px; color: #2d3748; margin-bottom: 10px; font-weight: 600;">🔗 Share your live location link:</p>
+        <input type="text" id="shareUrlInput" readonly style="width: 100%; padding: 10px; font-size: 12px; margin-bottom: 10px; color: #4a5568; background: #fff; border: 1px solid #cbd5e0; border-radius: 8px;">
+        <button class="btn btn-primary" onclick="copyTrackingLink()" style="padding: 12px; font-size: 14px; margin-bottom: 0;">📋 Copy Link</button>
+        <button class="btn" onclick="shareViaWhatsApp()" style="padding: 12px; font-size: 14px; background: #25D366; color: white; margin-top: 10px; margin-bottom: 0; box-shadow: 0 10px 30px rgba(37, 211, 102, 0.4);">💬 Share via WhatsApp</button>
+      </div>
+
+      <div class="info-box">
+        💡 Make sure location permissions are enabled in your browser settings
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let ws = null;
+    let watchId = null;
+    let userName = '';
+    let sendInterval = null;
+    let pendingQueue = []; // queue messages while WS not open
+
+    // Get server hostname dynamically
+    function getWebSocketURL() {
+      const WS_PROTOCOL = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const WS_PORT = window.location.port ? `:${window.location.port}` : "";
+      return `${WS_PROTOCOL}//${window.location.hostname}${WS_PORT}`;
+    }
+
+    function initWebSocket() {
+      const wsUrl = getWebSocketURL();
+      console.log(`[SHARE] Connecting to WebSocket: ${wsUrl}`);
+
+      try {
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = function () {
+          console.log('[SHARE] ✅ WebSocket connected');
+          updateStatus('connected');
+          document.getElementById('statusCard').classList.add('active');
+          // flush queued messages
+          while (pendingQueue.length > 0) {
+            const item = pendingQueue.shift();
+            try { ws.send(JSON.stringify(item)); console.log('[SHARE] Flushed queued message', item); } catch (e) { console.error('Flush failed', e); }
+          }
+        };
+
+        ws.onmessage = function (event) {
+          console.log('[SHARE] Message received:', event.data);
+
+          try {
+            const data = JSON.parse(event.data);
+
+            if (data.type === 'requestAccepted') {
+              console.log(`[SHARE] ✅ Request accepted by driver: ${data.driverId}`);
+              updateStatus('Driver accepted! Starting location sharing...');
+              document.getElementById('startBtn').style.display = 'none';
+              document.getElementById('stopBtn').style.display = 'block';
+              document.getElementById('userName').disabled = true;
+              startGPS();
+            } else if (data.type === 'requestRejected') {
+              console.log('[SHARE] ❌ Request rejected');
+              updateStatus('Request rejected by driver');
+              document.getElementById('startBtn').disabled = false;
+              document.getElementById('startBtn').textContent = 'Start Sharing';
+              alert('Your location sharing request was rejected by the driver.');
+            }
+          } catch (e) {
+            console.error('[SHARE] Error parsing message:', e);
+          }
+        };
+
+        ws.onerror = function (error) {
+          console.error('[SHARE] ❌ WebSocket error:', error);
+          updateStatus('error');
+        };
+
+        ws.onclose = function () {
+          console.log('[SHARE] ⚠️ WebSocket closed');
+          updateStatus('disconnected');
+          document.getElementById('statusCard').classList.remove('active');
+          // Try to reconnect after 3 seconds if still sharing
+          if (watchId !== null) {
+            setTimeout(() => {
+              console.log('[SHARE] 🔄 Attempting to reconnect...');
+              initWebSocket();
+            }, 3000);
+          }
+        };
+      } catch (error) {
+        console.error('[SHARE] Failed to create WebSocket:', error);
+        alert('Failed to connect to server. Please check if server is running.');
+      }
+    }
+
+    function startSharing() {
+      userName = document.getElementById('userName').value.trim();
+
+      if (!userName) {
+        alert('Please enter your name first');
+        document.getElementById('userName').focus();
+        return;
+      }
+
+      if (!navigator.geolocation) {
+        alert('Geolocation is not supported by your browser');
+        return;
+      }
+
+      console.log(`[SHARE] Starting location sharing for: ${userName}`);
+
+      // Initialize WebSocket (will flush queued messages when open)
+      initWebSocket();
+
+      // Immediately get current position and send a share request (will be queued if WS not ready)
+      navigator.geolocation.getCurrentPosition(
+        function (position) {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+
+          // Force an immediate location update to Trackers before the device moves!
+          const locUpdate = {
+            type: 'location',
+            userId: userName,
+            lat: lat,
+            lng: lng
+          };
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify(locUpdate));
+          } else {
+            pendingQueue.push(locUpdate);
+          }
+
+          // sendImmediateShare will queue if WS not yet open
+          sendImmediateShare(lat, lng);
+
+          // Start continuous GPS updates
+          startGPS();
+        },
+        function (error) {
+          console.error('[SHARE] ❌ Initial location error:', error);
+          alert('Could not get your location. Please enable location permissions.');
+        }
+      );
+    }
+
+    function startGPS() {
+      const options = {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      };
+
+      // Set up a backup interval to keep the session alive even if GPS doesn't move
+      if (sendInterval) clearInterval(sendInterval);
+      sendInterval = setInterval(() => {
+        if (ws && ws.readyState === WebSocket.OPEN && window.lastKnownLat) {
+          ws.send(JSON.stringify({
+            type: 'location',
+            userId: userName,
+            lat: window.lastKnownLat,
+            lng: window.lastKnownLng
+          }));
+        }
+      }, 5000);
+
+      watchId = navigator.geolocation.watchPosition(
+        function (position) {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          window.lastKnownLat = lat;
+          window.lastKnownLng = lng;
+
+          // Send location to server every 2 seconds
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            const data = {
+              type: 'location',
+              userId: userName,
+              lat: lat,
+              lng: lng
+            };
+
+            console.log(`[SHARE] 📍 Sending location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+            ws.send(JSON.stringify(data));
+            updateCoordinates(lat, lng);
+            updateStatus('connected');
+          } else {
+            console.warn('[SHARE] ⚠️ WebSocket not ready, cannot send location');
+          }
+        },
+        function (error) {
+          console.error('[SHARE] ❌ Geolocation error:', error);
+          let errorMsg = 'Location access denied. ';
+          if (error.code === 1) {
+            errorMsg += 'Please enable location permissions in your browser settings.';
+          } else if (error.code === 2) {
+            errorMsg += 'Location unavailable.';
+          } else {
+            errorMsg += 'Please try again.';
+          }
+          alert(errorMsg);
+          stopSharing();
+        },
+        options
+      );
+
+      // Update UI
+      document.getElementById('startBtn').style.display = 'none';
+      document.getElementById('stopBtn').style.display = 'block';
+      document.getElementById('statusCard').style.display = 'block';
+      document.getElementById('userName').disabled = true;
+      
+      document.getElementById('shareLinkCard').style.display = 'block';
+      document.getElementById('shareUrlInput').value = getTrackingLink();
+
+      console.log('[SHARE] ✅ GPS tracking started');
+    }
+
+    function stopSharing() {
+      console.log('[SHARE] 🛑 Stopping location sharing');
+
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+      }
+
+      if (sendInterval) {
+        clearInterval(sendInterval);
+        sendInterval = null;
+      }
+
+      if (ws) {
+        ws.close();
+        ws = null;
+      }
+
+      // Update UI
+      document.getElementById('startBtn').style.display = 'block';
+      document.getElementById('stopBtn').style.display = 'none';
+      document.getElementById('statusCard').style.display = 'none';
+      document.getElementById('userName').disabled = false;
+      updateStatus('disconnected');
+      document.getElementById('statusCard').classList.remove('active');
+      document.getElementById('shareLinkCard').style.display = 'none';
+    }
+
+    function updateStatus(status) {
+      const statusDot = document.getElementById('statusDot');
+      const statusText = document.getElementById('statusText');
+
+      if (status === 'connected') {
+        statusDot.className = 'status-dot active';
+        statusText.textContent = '● Sharing';
+        statusText.style.color = '#48bb78';
+      } else {
+        statusDot.className = 'status-dot inactive';
+        statusText.textContent = '● Disconnected';
+        statusText.style.color = '#f56565';
+      }
+    }
+
+    function updateCoordinates(lat, lng) {
+      const coordinatesDiv = document.getElementById('coordinates');
+      coordinatesDiv.innerHTML = `
+        <div class="coord-item">
+          <span class="coord-label">Latitude:</span>
+          <span class="coord-value clickable" onclick="sendImmediateShare(${lat}, ${lng})">${lat.toFixed(6)}</span>
+        </div>
+        <div class="coord-item">
+          <span class="coord-label">Longitude:</span>
+          <span class="coord-value clickable" onclick="sendImmediateShare(${lat}, ${lng})">${lng.toFixed(6)}</span>
+        </div>
+      `;
+    }
+
+    // Send share request immediately when user clicks coordinates
+    function sendImmediateShare(lat, lng) {
+      const requestId = 'share_' + Date.now();
+      const req = {
+        type: 'shareRequest',
+        requestId: requestId,
+        userId: userName || document.getElementById('userName').value.trim() || 'Anonymous',
+        lat: lat,
+        lng: lng
+      };
+
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        // queue the request to be sent when WS connects
+        pendingQueue.push(req);
+        console.log('[SHARE] WS not open, queued request', req);
+      } else {
+        ws.send(JSON.stringify(req));
+        console.log('[SHARE] 📤 Immediate share request sent:', req);
+      }
+
+      updateStatus('Share request sent to nearby drivers...', 'info');
+      document.getElementById('startBtn').disabled = true;
+      document.getElementById('startBtn').textContent = 'Waiting for Driver...';
+    }
+
+    // --- Peer to Peer Tracking Links ---
+    function getTrackingLink() {
+      return `${window.location.origin}/track.html?user=${encodeURIComponent(userName)}`;
+    }
+
+    function copyTrackingLink() {
+      const link = getTrackingLink();
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(link).then(() => alert('Tracking link copied! Send it to your friend.'));
+      } else {
+        prompt('Copy this link:', link);
+      }
+    }
+
+    function shareViaWhatsApp() {
+      const text = `Track my live location on Sahaya: ${getTrackingLink()}`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    }
+
+    // Allow Enter key to start sharing
+    document.getElementById('userName').addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') {
+        startSharing();
+      }
+    });
+  </script>
+</body>
+
+</html>

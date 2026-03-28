@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Volunteer - First Responder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Poppins', sans-serif; background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); min-height: 100vh; padding: 20px; }
+    .container { max-width: 800px; margin: 0 auto; }
+    .header { background: rgba(255, 255, 255, 0.95); border-radius: 20px; padding: 25px 30px; margin-bottom: 20px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2); display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-size: 24px; font-weight: 800; color: #d66a00; }
+    .map-container { background: rgba(255, 255, 255, 0.95); border-radius: 20px; padding: 20px; margin-bottom: 20px; box-shadow: 0 15px 50px rgba(0, 0, 0, 0.15); }
+    #map { height: 400px; width: 100%; border-radius: 18px; z-index: 1; }
+    .request-box { margin-top: 15px; text-align: center; }
+    .request-box h3 { font-size: 22px; color: #2d3748; margin-bottom: 15px; }
+    #requestText { font-size: 18px; font-weight: 600; color: #718096; margin-bottom: 20px; }
+    button { padding: 15px 30px; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; text-transform: uppercase; margin: 5px; }
+    .btn-accept { background: #48bb78; color: white; width: 100%; margin-bottom: 10px; }
+    .btn-reject { background: #f56565; color: white; width: 100%; }
+    .btn-arrived { background: #4299e1; color: white; width: 100%; display: none; }
+    .back-btn { position: fixed; top: 20px; left: 20px; background: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 1000; }
+    
+    #requestModalBackdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1999; }
+    #requestModal { display:none; position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:90%; max-width:500px; z-index:2000; }
+    #modalContent { background:#fff; padding:35px; border-radius:18px; text-align:center; box-shadow: 0 25px 70px rgba(0,0,0,0.4); }
+  </style>
+</head>
+
+<body>
+  <a href="index.html" class="back-btn">←</a>
+  <div class="container">
+    <div class="header">
+      <h1>⛑️ First Responder</h1>
+      <div style="background:#48bb78; color:white; padding:10px 20px; border-radius:25px; font-weight:bold;">Active</div>
+    </div>
+
+    <div class="map-container">
+      <div id="map"></div>
+      <div class="request-box">
+        <h3>📡 Nearby Alerts</h3>
+        <p id="requestText">Listening for local emergencies...</p>
+        <div id="requestButtons" style="display: none;">
+          <button class="btn-accept" onclick="acceptRequest()">✅ I can help (Respond)</button>
+          <button class="btn-reject" onclick="rejectRequest()">❌ Too far (Ignore)</button>
+        </div>
+        <button id="arrivedBtn" class="btn-arrived">📍 Arrived at Scene</button>
+        
+        <div id="chatBox" style="display: none; margin-top: 15px; background: white; padding: 15px; border-radius: 15px; border: 1px solid #ddd; text-align: left;">
+          <h3 style="font-size: 16px; margin-bottom: 10px;">🎙️ Visual Triage & Info</h3>
+          <div id="chatMessages" style="height: 150px; overflow-y: auto; margin-bottom: 10px; background: #f7fafc; padding: 10px; border-radius: 8px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="requestModalBackdrop"></div>
+  <div id="requestModal">
+    <div id="modalContent">
+      <div id="modalText" style="font-size:24px; font-weight:800; margin-bottom:18px; color:#f56565;">🚨 MEDICAL EMERGENCY</div>
+      <div id="modalCoords" style="color:#4a5568; margin-bottom:30px; font-size:15px; line-height:1.6;"></div>
+      <button id="modalAccept" class="btn-accept">✅ RUN TO HELP</button>
+      <button id="modalReject" class="btn-reject">❌ IGNORE</button>
+    </div>
+  </div>
+
+  <script>
+    let map;
+    let markers = {};
+    let ws;
+    let watchId = null;
+    let currentEmergency = null;
+    let activeEmergencyId = null;
+    const volunteerId = 'Vol_' + Math.random().toString(36).substr(2, 6);
+
+    function initMap() {
+      map = L.map('map').setView([20.2961, 85.8245], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+      startTracking();
+    }
+
+    function getWebSocketURL() {
+      const WS_PROTOCOL = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const WS_PORT = window.location.port ? `:${window.location.port}` : "";
+      return `${WS_PROTOCOL}//${window.location.hostname}${WS_PORT}`;
+    }
+
+    function initWebSocket() {
+      ws = new WebSocket(getWebSocketURL());
+      ws.onopen = () => ws.send(JSON.stringify({ type: 'volunteer', volunteerId: volunteerId }));
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if ((data.type === 'newRequest' && data.requestType === 'emergency') || data.type === 'emergency') {
+            handleEmergencyRequest(data);
+        } else if (data.type === 'triageUpdated' && currentEmergency) {
+           const tEl = document.getElementById('liveTriage');
+           if(tEl) tEl.textContent = data.triageInfo;
+        } else if (data.type === 'imageMessage') addImageToUI('Patient', data.imageData);
+      };
+      ws.onclose = () => setTimeout(initWebSocket, 3000);
+    }
+
+    function handleEmergencyRequest(data) {
+      currentEmergency = data;
+      document.getElementById('requestText').textContent = '🚨 SOMEONE NEEDS FIRST AID!';
+      document.getElementById('requestButtons').style.display = 'block';
+      
+      let profileHtml = "";
+      if (data.profile && (data.profile.name || data.profile.blood || data.profile.conditions)) {
+        profileHtml = `<br><br><b>👤 Name:</b> ${data.profile.name || 'Unknown'}<br><b>🩸 Blood:</b> ${data.profile.blood || 'Unknown'}<br><b>⚠️ Conditions:</b> ${data.profile.conditions || 'None'}`;
+      }
+
+      document.getElementById('modalCoords').innerHTML = `📍 Distance: Nearby.<br><b>🎙️ Needs:</b> <span id="liveTriage" style="color:#e53e3e; font-weight:bold;">${data.triageInfo || "Help"}</span>${profileHtml}`;
+      document.getElementById('modalAccept').onclick = () => { acceptRequest(); hideModal(); };
+      document.getElementById('modalReject').onclick = () => { rejectRequest(); hideModal(); };
+      document.getElementById('requestModal').style.display = 'block';
+      document.getElementById('requestModalBackdrop').style.display = 'block';
+
+      if(markers['emergency']) map.removeLayer(markers['emergency']);
+      markers['emergency'] = L.marker([data.lat, data.lng]).addTo(map).bindPopup('🚨 Emergency here').openPopup();
+      map.setView([data.lat, data.lng], 15);
+    }
+
+    function acceptRequest() {
+      activeEmergencyId = currentEmergency.requestId || 'emergency_' + Date.now();
+      let lat = markers[volunteerId] ? markers[volunteerId].getLatLng().lat : null;
+      let lng = markers[volunteerId] ? markers[volunteerId].getLatLng().lng : null;
+      ws.send(JSON.stringify({ type: 'acceptRequest', requestId: activeEmergencyId, volunteerId: volunteerId, lat, lng }));
+      document.getElementById('requestText').textContent = `✅ You are responding! Run safely.`;
+      document.getElementById('requestButtons').style.display = 'none';
+      document.getElementById('arrivedBtn').style.display = 'block';
+      document.getElementById('chatBox').style.display = 'block';
+    }
+
+    function rejectRequest() {
+      if (markers['emergency']) map.removeLayer(markers['emergency']);
+      document.getElementById('requestButtons').style.display = 'none';
+      document.getElementById('requestText').textContent = 'Listening for local emergencies...';
+    }
+
+    function hideModal() {
+      document.getElementById('requestModal').style.display = 'none';
+      document.getElementById('requestModalBackdrop').style.display = 'none';
+    }
+
+    function startTracking() {
+      if (!navigator.geolocation) return;
+      watchId = navigator.geolocation.watchPosition((pos) => {
+        const lat = pos.coords.latitude, lng = pos.coords.longitude;
+        if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'locationUpdate', driverId: volunteerId, lat, lng }));
+        if (!markers[volunteerId]) {
+          markers[volunteerId] = L.marker([lat, lng]).addTo(map).bindPopup('⛑️ You').openPopup();
+          map.setView([lat, lng], 15);
+        } else markers[volunteerId].setLatLng([lat, lng]);
+      }, null, { enableHighAccuracy: true });
+    }
+
+    document.getElementById('arrivedBtn').onclick = () => {
+      document.getElementById('requestText').textContent = '✅ Arrived! Provide first aid.';
+      document.getElementById('arrivedBtn').style.display = 'none';
+    };
+
+    function addImageToUI(sender, base64) {
+      const chat = document.getElementById('chatMessages');
+      chat.innerHTML += `<div style="margin-bottom:10px; padding:8px; background:#bee3f8; border-radius:8px;"><b>${sender}:</b><br><img src="${base64}" style="max-width:100%; border-radius:8px; margin-top:5px;"></div>`;
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    window.onload = () => { initMap(); initWebSocket(); };
+  </script>
+</body>
+</html>

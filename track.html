@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiveShare - Track Locations</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      transition: background 0.3s ease;
+    }
+
+    body.dark-mode {
+      background: #1a1a1a;
+    }
+
+    #map {
+      width: 100%;
+      height: 60vh;
+      z-index: 1;
+      border-bottom-left-radius: 12px;
+      border-bottom-right-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Bottom info panel under the map */
+    .info-panel {
+      width: 100%;
+      max-width: 1200px;
+      margin: 18px auto 24px auto;
+      background: linear-gradient(135deg, #ffffff, #f7fafc);
+      border-radius: 16px;
+      padding: 18px 20px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+      display: flex;
+      gap: 18px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .info-block {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .info-title {
+      font-weight: 700;
+      color: #2d3748;
+    }
+
+    .info-value {
+      font-size: 20px;
+      font-weight: 800;
+      color: #1a202c;
+    }
+
+    .pill {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-weight: 700
+    }
+
+    /* Animated marker (smooth movement) */
+    .custom-marker {
+      transition: transform 0.6s linear;
+    }
+
+    .sidebar {
+      position: fixed;
+      top: 0;
+      right: -400px;
+      width: 400px;
+      max-width: 90vw;
+      height: 100vh;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      box-shadow: -5px 0 30px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+      transition: right 0.3s ease;
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    body.dark-mode .sidebar {
+      background: rgba(26, 26, 26, 0.95);
+      color: #e0e0e0;
+    }
+
+    .sidebar.open {
+      right: 0;
+    }
+
+    .sidebar-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 24px;
+      color: white;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .sidebar-header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .sidebar-header p {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    .dark-mode-toggle {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 18px;
+      transition: all 0.3s ease;
+    }
+
+    .dark-mode-toggle:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: scale(1.1);
+    }
+
+    .sidebar-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 50px;
+      height: 50px;
+      background: white;
+      border: none;
+      border-radius: 50%;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      cursor: pointer;
+      z-index: 1001;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      transition: all 0.3s ease;
+    }
+
+    body.dark-mode .sidebar-toggle {
+      background: #2d2d2d;
+      color: #e0e0e0;
+    }
+
+    .sidebar-toggle:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .user-list {
+      padding: 20px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .user-card {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: 2px solid transparent;
+    }
+
+    body.dark-mode .user-card {
+      background: #2d2d2d;
+      color: #e0e0e0;
+    }
+
+    .user-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    }
+
+    .user-card.active {
+      border-color: #667eea;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    }
+
+    body.dark-mode .user-card.active {
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+    }
+
+    .user-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .user-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: #2d3748;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    body.dark-mode .user-name {
+      color: #e0e0e0;
+    }
+
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 700;
+      color: white;
+    }
+
+    .status-badge {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .status-badge.online {
+      background: #c6f6d5;
+      color: #22543d;
+    }
+
+    body.dark-mode .status-badge.online {
+      background: #22543d;
+      color: #c6f6d5;
+    }
+
+    .status-badge.offline {
+      background: #fed7d7;
+      color: #742a2a;
+    }
+
+    body.dark-mode .status-badge.offline {
+      background: #742a2a;
+      color: #fed7d7;
+    }
+
+    .user-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .info-label {
+      font-size: 11px;
+      color: #718096;
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-bottom: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    body.dark-mode .info-label {
+      color: #a0a0a0;
+    }
+
+    .info-value {
+      font-size: 16px;
+      font-weight: 600;
+      color: #2d3748;
+    }
+
+    body.dark-mode .info-value {
+      color: #e0e0e0;
+    }
+
+    .info-value.route {
+      font-size: 14px;
+      color: #667eea;
+    }
+
+    .last-updated {
+      font-size: 11px;
+      color: #a0a0a0;
+      margin-top: 8px;
+      font-style: italic;
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #e2e8f0;
+      border-radius: 50%;
+      border-top-color: #667eea;
+      animation: spin 0.8s linear infinite;
+      margin-left: 8px;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #718096;
+    }
+
+    body.dark-mode .empty-state {
+      color: #a0a0a0;
+    }
+
+    .empty-state-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+    }
+
+    .empty-state-text {
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .route-controls {
+      padding: 16px 20px;
+      border-top: 1px solid #e2e8f0;
+      background: #f7fafc;
+    }
+
+    body.dark-mode .route-controls {
+      background: #1a1a1a;
+      border-top-color: #404040;
+    }
+
+    .route-btn {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    .route-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .route-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 100vw;
+        right: -100vw;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="map"></div>
+
+  <!-- Info panel below map -->
+  <div class="info-panel" id="infoPanel">
+    <div class="info-block">
+      <div class="info-title">Selected</div>
+      <div id="infoName" class="info-value">None</div>
+    </div>
+    <div class="info-block">
+      <div class="info-title">Distance</div>
+      <div id="infoDistance" class="info-value">-</div>
+    </div>
+    <div class="info-block">
+      <div class="info-title">ETA</div>
+      <div id="infoEta" class="info-value">-</div>
+    </div>
+    <div class="info-block">
+      <div class="info-title">Route</div>
+      <div id="infoRoute" class="pill">—</div>
+    </div>
+    <div class="info-block">
+      <div class="info-title">Speed</div>
+      <div id="infoSpeed" class="info-value">-</div>
+    </div>
+    <div class="info-block">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; height:100%; font-size: 14px; font-weight: 600; color: #2d3748;">
+        <input type="checkbox" id="followToggle" onchange="handleFollowToggle()" style="width:18px;height:18px; accent-color: #667eea;">
+        <span>Follow Mode</span>
+      </label>
+    </div>
+    <div class="info-block">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; height:100%; font-size: 14px; font-weight: 600; color: #2d3748;">
+        <input type="checkbox" id="wakeLockToggle" onchange="toggleWakeLock()" style="width:18px;height:18px; accent-color: #f56565;">
+        <span>Keep Screen On</span>
+      </label>
+    </div>
+  </div>
+
+  <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">☰</button>
+
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h1>
+        <span>📍 LiveShare</span>
+        <button class="dark-mode-toggle" onclick="toggleDarkMode()" title="Toggle Dark Mode">🌙</button>
+      </h1>
+      <p>Real-time Location Tracking</p>
+      <div style="margin-top: 10px;">
+        <select id="mapStyle" onchange="changeMapStyle()" style="width: 100%; padding: 8px; border-radius: 8px; border: none; background: rgba(255,255,255,0.2); color: white; outline: none;">
+          <option value="standard" style="color: black;">🗺️ Standard Map</option>
+          <option value="satellite" style="color: black;">🛰️ Satellite View</option>
+          <option value="dark" style="color: black;">🌙 Dark Map</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="user-list" id="userList">
+      <div class="empty-state">
+        <div class="empty-state-icon">👥</div>
+        <div class="empty-state-text">No active users</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let map;
+    let ws = null;
+    let markers = {};
+    let routes = {};
+    let activeUserId = null;
+    let myLocation = null;
+    let lastPositions = {}; // Store last position for direction calculation
+    let trackingPairs = {}; // Store patient-driver tracking pairs
+    let alertPlayed = {}; // Track which users have triggered the proximity alert
+    let currentTileLayer = null;
+    let wakeLock = null;
+    const proximityAlertSound = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+    
+    // URL Parameters for auto-selecting a shared user
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetUser = urlParams.get('user');
+    let autoSelected = false;
+
+    // Color palette for markers
+    const markerColors = [
+      '#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b',
+      '#fa709a', '#fee140', '#30cfd0', '#a8edea', '#fed6e3'
+    ];
+    let colorIndex = 0;
+
+    // Custom marker icons
+    function createMarkerIcon(color, rotation = 0) {
+      return L.divIcon({
+        className: 'custom-marker',
+        html: `<div style="
+          width: 20px;
+          height: 20px;
+          background: ${color};
+          border: 3px solid white;
+          border-radius: 50%;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+          transform: rotate(${rotation}deg);
+        "></div>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+      });
+    }
+
+    // Ambulance SVG icon for drivers
+    function createAmbulanceIcon(label) {
+      const svg = `
+        <svg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 24 24'>
+          <rect x='1' y='4' width='14' height='12' rx='2' fill='#ff6b6b'/>
+          <rect x='15' y='7' width='6' height='6' rx='1' fill='#4fd1c5' />
+          <circle cx='6.5' cy='17.5' r='1.8' fill='#333'/>
+          <circle cx='17.5' cy='17.5' r='1.8' fill='#333'/>
+          <text x='12' y='12' font-size='7' text-anchor='middle' fill='#fff' font-weight='700'>${label || ''}</text>
+        </svg>`;
+
+      return L.divIcon({
+        className: 'custom-marker ambulance-marker',
+        html: `<div style="transform: translate(-50%,-50%);">${svg}</div>`,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18]
+      });
+    }
+
+    // Smoothly animate marker to new position
+    function animateMarkerTo(marker, latlng) {
+      if (!marker) return;
+      try {
+        // Use small steps for smooth transition
+        const from = marker.getLatLng();
+        const to = L.latLng(latlng[0], latlng[1]);
+        const steps = 8;
+        let i = 0;
+        const latStep = (to.lat - from.lat) / steps;
+        const lngStep = (to.lng - from.lng) / steps;
+
+        const anim = setInterval(() => {
+          i++;
+          const next = L.latLng(from.lat + latStep * i, from.lng + lngStep * i);
+          marker.setLatLng(next);
+          if (i >= steps) clearInterval(anim);
+        }, 70);
+      } catch (e) { marker.setLatLng(latlng); }
+    }
+
+    // Initialize map - DO NOT track own location
+    function initMap() {
+      map = L.map('map').setView([20.2961, 85.8245], 13);
+
+      // Initialize with Standard Map
+      changeMapStyle();
+
+      // Get current location ONLY for route calculation (not displayed on map)
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          function (position) {
+            myLocation = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            };
+            console.log(`[TRACK] 📍 Got own location for route calculation: ${myLocation.lat}, ${myLocation.lng}`);
+            
+            // Center map on own location
+            map.setView([myLocation.lat, myLocation.lng], 14);
+            
+            // Display "You are here" marker
+            L.marker([myLocation.lat, myLocation.lng], {
+              icon: L.divIcon({
+                className: 'custom-marker',
+                html: `<div style="width: 18px; height: 18px; background: #3182ce; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.4);"></div>`,
+                iconSize: [18, 18],
+                iconAnchor: [9, 9]
+              })
+            }).addTo(map).bindPopup("<b>📍 You are here</b>").openPopup();
+          },
+          function (error) {
+            console.log('[TRACK] ⚠️ Could not get current location (route calculation may not work):', error);
+          }
+        );
+      }
+    }
+
+    // Change Map Base Style
+    function changeMapStyle() {
+      const style = document.getElementById('mapStyle').value;
+      if (currentTileLayer) map.removeLayer(currentTileLayer);
+      
+      const styles = {
+        standard: { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', attr: '© OpenStreetMap' },
+        satellite: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr: 'Tiles © Esri' },
+        dark: { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', attr: '© CARTO' }
+      };
+
+      currentTileLayer = L.tileLayer(styles[style].url, {
+        attribution: styles[style].attr,
+        maxZoom: 19
+      }).addTo(map);
+    }
+
+    // Calculate bearing (direction) between two points
+    function calculateBearing(lat1, lng1, lat2, lng2) {
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const lat1Rad = lat1 * Math.PI / 180;
+      const lat2Rad = lat2 * Math.PI / 180;
+
+      const y = Math.sin(dLng) * Math.cos(lat2Rad);
+      const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) -
+        Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLng);
+
+      const bearing = Math.atan2(y, x) * 180 / Math.PI;
+      return (bearing + 360) % 360;
+    }
+
+    // Get WebSocket URL dynamically
+    function getWebSocketURL() {
+      const WS_PROTOCOL = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const WS_PORT = window.location.port ? `:${window.location.port}` : "";
+      return `${WS_PROTOCOL}//${window.location.hostname}${WS_PORT}`;
+    }
+
+    // Initialize WebSocket
+    function initWebSocket() {
+      const wsUrl = getWebSocketURL();
+      console.log(`[TRACK] 🔌 Connecting to WebSocket: ${wsUrl}`);
+
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = function () {
+        console.log('[TRACK] ✅ WebSocket connected');
+        // Register as tracker
+        ws.send(JSON.stringify({ type: 'tracker' }));
+        console.log('[TRACK] 📊 Registered as tracker');
+      };
+
+      ws.onmessage = function (event) {
+        try {
+          const data = JSON.parse(event.data);
+          console.log(`[TRACK] 📨 Received message type: ${data.type}`);
+
+          if (data.type === 'allUsers') {
+            console.log(`[TRACK] 📋 Received ${data.users.length} active user(s)`);
+            data.users.forEach(user => {
+              console.log(`[TRACK] 👤 Adding user: ${user.userId} at ${user.lat}, ${user.lng}`);
+              addOrUpdateUser(user.userId, Number(user.lat), Number(user.lng), user.timestamp);
+            });
+          } else if (data.type === 'locationUpdate') {
+            // User position update
+            if (data.userId) {
+              console.log(`[TRACK] 📍 Location update from ${data.userId}: ${Number(data.lat).toFixed(6)}, ${Number(data.lng).toFixed(6)}`);
+              addOrUpdateUser(data.userId, Number(data.lat), Number(data.lng), data.timestamp);
+            }
+          } else if (data.type === 'driverLocation') {
+            // Driver position update
+            const dId = data.driverId || 'driver';
+            console.log(`[TRACK] 🚑 Driver location update: ${dId} ${data.lat}, ${data.lng}`);
+
+            // Create or update driver marker
+            if (!markers[dId]) {
+              markers[dId] = L.marker([data.lat, data.lng], {
+                icon: createAmbulanceIcon(dId)
+              }).addTo(map).bindPopup(`🚑 ${dId}`);
+            } else {
+              animateMarkerTo(markers[dId], [data.lat, data.lng]);
+            }
+
+            // If this driver is assigned to any patient(s), recalc route(s)
+            for (const [patientId, driverId] of Object.entries(trackingPairs)) {
+              if (driverId === dId) {
+                calculateTrackingRoute(patientId, dId);
+              }
+            }
+          } else if (data.type === 'userLeft') {
+            console.log(`[TRACK] 👋 User disconnected: ${data.userId}`);
+            removeUser(data.userId);
+          } else if (data.type === 'linkDriverUser') {
+            console.log(`[TRACK] 🚑 Starting tracking: Patient ${data.userId}, Driver ${data.driverId}`);
+            startTrackingPair(data.userId, data.driverId, data.lat, data.lng);
+          }
+        } catch (err) {
+          console.error('[TRACK] ❌ Error parsing message:', err);
+        }
+      };
+
+      ws.onerror = function (error) {
+        console.error('[TRACK] ❌ WebSocket error:', error);
+      };
+
+      ws.onclose = function () {
+        console.log('[TRACK] ⚠️ WebSocket closed. Reconnecting...');
+        setTimeout(initWebSocket, 3000);
+      };
+
+      // Stale Data Check (Signal Lost Indicator)
+      setInterval(() => {
+        const now = Date.now();
+        for (const uid in lastPositions) {
+          if (now - lastPositions[uid].timestamp > 60000) { // 60 seconds without data
+            const statusBadge = document.querySelector(`#user-${uid} .status-badge`);
+            if (statusBadge && !statusBadge.classList.contains('offline')) {
+              statusBadge.className = 'status-badge offline';
+              statusBadge.textContent = '⚠️ Signal Lost';
+            }
+          }
+        }
+      }, 10000);
+    }
+
+    // Add or update user marker
+    function addOrUpdateUser(userId, lat, lng, timestamp) {
+      const position = [lat, lng];
+      let rotation = 0;
+      let speed = 0;
+      const now = Date.now();
+
+      // Calculate rotation and speed based on movement
+      if (lastPositions[userId]) {
+        const lastPos = lastPositions[userId];
+        rotation = calculateBearing(lastPos.lat, lastPos.lng, lat, lng);
+        
+        const distMeters = map.distance([lastPos.lat, lastPos.lng], [lat, lng]);
+        const timeSecs = (now - lastPos.timestamp) / 1000;
+        if (timeSecs > 0 && distMeters > 2) {
+          speed = Math.round((distMeters / timeSecs) * 3.6); // Convert m/s to km/h
+        } else {
+          speed = lastPos.speed || 0; // maintain previous speed if stationary
+        }
+      }
+
+      if (!markers[userId]) {
+        // Create new marker
+        const color = markerColors[colorIndex % markerColors.length];
+        colorIndex++;
+
+        console.log(`[TRACK] 🎯 Creating new marker for ${userId} with color ${color}`);
+        markers[userId] = L.marker(position, {
+          icon: createMarkerIcon(color, rotation)
+        }).addTo(map);
+
+        markers[userId].bindPopup(`<b>${userId}</b><br>📍 Location sharing active`);
+
+        // Add click listener
+        markers[userId].on('click', function () {
+          selectUser(userId);
+        });
+      } else {
+        // Smoothly animate marker movement
+        const currentPos = markers[userId].getLatLng();
+        if (currentPos) {
+          const distance = map.distance(currentPos, position);
+
+          if (distance > 10) { // Only animate if moved more than 10 meters
+            // Update icon with rotation
+            const color = markerColors[Object.keys(markers).indexOf(userId) % markerColors.length];
+            markers[userId].setIcon(createMarkerIcon(color, rotation));
+
+            // Smooth animation using helper
+            animateMarkerTo(markers[userId], position);
+          } else {
+            markers[userId].setLatLng(position);
+          }
+        } else {
+          markers[userId].setLatLng(position);
+        }
+      }
+
+      // Store current position for next calculation
+      lastPositions[userId] = { lat, lng, timestamp: now, speed };
+
+      // Update user card in sidebar
+      updateUserCard(userId, lat, lng, timestamp, speed);
+
+      // Follow Mode logic
+      const followToggle = document.getElementById('followToggle');
+      if (followToggle && followToggle.checked && activeUserId === userId) {
+        map.panTo(position);
+      }
+      // Check if this user is part of a tracking pair and recalculate route
+      if (trackingPairs[userId]) {
+        // This is a patient, driver is trackingPairs[userId]
+        calculateTrackingRoute(userId, trackingPairs[userId]);
+      } else {
+        // Check if this user is a driver tracking someone
+        for (const [patientId, driverId] of Object.entries(trackingPairs)) {
+          if (driverId === userId) {
+            calculateTrackingRoute(patientId, driverId);
+            break;
+          }
+        }
+      }
+
+      if (!followToggle || !followToggle.checked) {
+        // Auto-fit bounds to show all markers only if not following a specific user
+        fitMapToMarkers();
+     }
+    }
+
+    // Remove user
+    function removeUser(userId) {
+      console.log(`[TRACK] 🗑️ Removing user: ${userId}`);
+
+      if (markers[userId]) {
+        map.removeLayer(markers[userId]);
+        delete markers[userId];
+      }
+
+      if (routes[userId]) {
+        map.removeLayer(routes[userId]);
+        delete routes[userId];
+      }
+
+      delete lastPositions[userId];
+
+      if (activeUserId === userId) {
+        activeUserId = null;
+        
+        // Clear the info panel details
+        if (document.getElementById('infoName')) document.getElementById('infoName').textContent = 'None';
+        if (document.getElementById('infoDistance')) document.getElementById('infoDistance').textContent = '-';
+        if (document.getElementById('infoEta')) document.getElementById('infoEta').textContent = '-';
+        if (document.getElementById('infoRoute')) document.getElementById('infoRoute').textContent = '—';
+        if (document.getElementById('infoSpeed')) document.getElementById('infoSpeed').textContent = '-';
+      }
+
+      // Actually remove the user card from the DOM
+      const card = document.getElementById(`user-${userId}`);
+      if (card) card.remove();
+
+      updateUserList();
+    }
+
+    // Manually clear user from map and sidebar
+    function removeUserManual(userId, event) {
+      if (event) event.stopPropagation();
+      if (confirm(`Are you sure you want to remove ${userId} from the tracking map?`)) {
+        removeUser(userId);
+      }
+    }
+
+    // Calculate route using OSRM
+    function calculateRoute(userId, evt) {
+      if (evt) evt.stopPropagation();
+
+      if (!myLocation || !markers[userId]) {
+        alert('Please enable location access to calculate route');
+        return;
+      }
+
+      const destination = markers[userId].getLatLng();
+      const button = evt ? evt.target : document.querySelector(`#user-${userId} .route-btn`);
+      button.disabled = true;
+      button.innerHTML = 'Calculating<span class="loading-spinner"></span>';
+
+      // OSRM API endpoint
+      const url = `https://router.project-osrm.org/route/v1/driving/${myLocation.lng},${myLocation.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson`;
+
+      console.log(`[TRACK] 🗺️ Calculating route to ${userId}`);
+      console.log(`[TRACK] From: ${myLocation.lat}, ${myLocation.lng}`);
+      console.log(`[TRACK] To: ${destination.lat}, ${destination.lng}`);
+
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          button.disabled = false;
+          button.textContent = 'Show Route';
+
+          if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+            const route = data.routes[0];
+            const geometry = route.geometry;
+            const distance = (route.distance / 1000).toFixed(2); // Convert to km
+            const duration = Math.round(route.duration / 60); // Convert to minutes
+
+            console.log(`[TRACK] ✅ Route calculated: ${distance} km, ${duration} min`);
+
+            // Remove existing route if any
+            if (routes[userId]) {
+              map.removeLayer(routes[userId]);
+            }
+
+            // Draw route polyline
+            const color = markerColors[Object.keys(markers).indexOf(userId) % markerColors.length];
+            routes[userId] = L.geoJSON(geometry, {
+              style: {
+                color: color,
+                weight: 4,
+                opacity: 0.7
+              }
+            }).addTo(map);
+
+            // Update distance and ETA
+            document.getElementById(`distance-${userId}`).textContent = `${distance} km`;
+            document.getElementById(`eta-${userId}`).textContent = `${duration} min`;
+            document.getElementById(`distance-${userId}`).classList.add('route');
+            document.getElementById(`eta-${userId}`).classList.add('route');
+          } else {
+            console.error('[TRACK] ❌ Route calculation failed:', data);
+            alert('Could not calculate route. Please try again.');
+          }
+        })
+        .catch(error => {
+          console.error('[TRACK] ❌ Route calculation error:', error);
+          button.disabled = false;
+          button.textContent = 'Show Route';
+          alert('Error calculating route. Please check your connection.');
+        });
+    }
+
+    // Update user card in sidebar
+    function updateUserCard(userId, lat, lng, timestamp, speed = 0) {
+      let userCard = document.getElementById(`user-${userId}`);
+
+      if (!userCard) {
+        // Create new card
+        const userList = document.getElementById('userList');
+        const emptyState = userList.querySelector('.empty-state');
+        if (emptyState) {
+          emptyState.remove();
+        }
+        userCard = document.createElement('div');
+        userCard.className = 'user-card';
+        userCard.id = `user-${userId}`;
+        userCard.onclick = () => selectUser(userId);
+
+        const avatarColor = markerColors[Object.keys(markers).indexOf(userId) % markerColors.length];
+        const initials = userId.substring(0, 2).toUpperCase();
+
+        userCard.innerHTML = `
+          <div class="user-header">
+            <div class="user-name">
+              <div class="user-avatar" style="background: ${avatarColor}">${initials}</div>
+              ${userId}
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="status-badge online">Sharing</span>
+              <button onclick="removeUserManual('${userId}', event)" style="background: none; border: none; cursor: pointer; font-size: 16px; padding: 4px;" title="Clear from map">❌</button>
+            </div>
+          </div>
+          <div class="user-info">
+            <div class="info-item">
+              <span class="info-label">Distance</span>
+              <span class="info-value" id="distance-${userId}">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">ETA</span>
+              <span class="info-value" id="eta-${userId}">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Speed</span>
+              <span class="info-value" id="speed-${userId}">${speed} km/h</span>
+            </div>
+          </div>
+          <div class="last-updated" id="updated-${userId}"></div>
+          <div class="route-controls">
+            <button class="route-btn" onclick="calculateRoute('${userId}', event)">
+              Show Route
+            </button>
+          </div>
+        `;
+
+        userList.appendChild(userCard);
+        console.log(`[TRACK] ✅ Created user card for ${userId}`);
+      }
+      
+      // Reset status badge if connection restored
+      const statusBadge = userCard.querySelector('.status-badge');
+      if (statusBadge && statusBadge.classList.contains('offline')) {
+        statusBadge.className = 'status-badge online';
+        statusBadge.textContent = 'Sharing';
+      }
+
+      // Update distance if we have our location
+      if (myLocation) {
+        const distance = map.distance(
+          [myLocation.lat, myLocation.lng],
+          [lat, lng]
+        );
+
+        const distanceKm = (distance / 1000).toFixed(2);
+        const distanceElement = document.getElementById(`distance-${userId}`);
+        if (distanceElement && !distanceElement.classList.contains('route')) {
+          distanceElement.textContent = `${distanceKm} km`;
+        }
+
+        // Estimate ETA (assuming average speed of 30 km/h)
+        const etaMinutes = Math.round((distance / 1000) / 30 * 60);
+        const etaElement = document.getElementById(`eta-${userId}`);
+        if (etaElement && !etaElement.classList.contains('route')) {
+          etaElement.textContent = `${etaMinutes} min`;
+        }
+        
+        // Proximity Sound Alert
+        if (distanceKm < 0.5 && !alertPlayed[userId]) {
+          alertPlayed[userId] = true;
+          try { proximityAlertSound.play(); } catch(e){}
+          alert(`🔔 Alert: ${userId} is within 500 meters of your location!`);
+        } else if (distanceKm > 0.6) {
+          alertPlayed[userId] = false; // Reset if they move away
+        }
+      }
+
+      // Update speed display
+      const speedElement = document.getElementById(`speed-${userId}`);
+      if (speedElement) speedElement.textContent = `${speed} km/h`;
+      
+      if (activeUserId === userId && document.getElementById('infoSpeed')) {
+        document.getElementById('infoSpeed').textContent = `${speed} km/h`;
+      }
+
+      // Update last updated time
+      if (timestamp) {
+        const updatedElement = document.getElementById(`updated-${userId}`);
+        if (updatedElement) {
+          const date = new Date(timestamp);
+          const now = new Date();
+          const diffSeconds = Math.floor((now - date) / 1000);
+
+          let timeText = 'Just now';
+          if (diffSeconds > 60) {
+            const diffMinutes = Math.floor(diffSeconds / 60);
+            timeText = `${diffMinutes} min ago`;
+          }
+
+          updatedElement.textContent = `Updated: ${timeText}`;
+        }
+      }
+    }
+
+    // Select user
+    function selectUser(userId) {
+      // Remove active class from all cards
+      document.querySelectorAll('.user-card').forEach(card => {
+        card.classList.remove('active');
+      });
+
+      // Add active class to selected card
+      const card = document.getElementById(`user-${userId}`);
+      if (card) {
+        card.classList.add('active');
+      }
+
+      activeUserId = userId;
+
+      // Center map on selected user
+      if (markers[userId]) {
+        map.setView(markers[userId].getLatLng(), 15);
+      }
+      // Update bottom info panel
+      const infoName = document.getElementById('infoName');
+      const infoDistance = document.getElementById('infoDistance');
+      const infoEta = document.getElementById('infoEta');
+      const infoRoute = document.getElementById('infoRoute');
+      const infoSpeed = document.getElementById('infoSpeed');
+
+      if (infoName) infoName.textContent = userId;
+      if (infoDistance) infoDistance.textContent = '-';
+      if (infoEta) infoEta.textContent = '-';
+      if (infoRoute) infoRoute.textContent = '—';
+      if (infoSpeed) infoSpeed.textContent = (lastPositions[userId] ? lastPositions[userId].speed : 0) + ' km/h';
+
+      // If this user is being tracked by a driver, show live route
+      if (trackingPairs[userId]) {
+        calculateTrackingRoute(userId, trackingPairs[userId]);
+      }
+    }
+
+    // Fit map to show all markers
+    function fitMapToMarkers() {
+      const markerArray = Object.values(markers);
+      if (markerArray.length > 0) {
+        const group = new L.featureGroup(markerArray);
+        map.fitBounds(group.getBounds().pad(0.1), {
+          maxZoom: 15
+        });
+      }
+    }
+
+    // Update user list
+    function updateUserList() {
+      const userList = document.getElementById('userList');
+      const userCards = userList.querySelectorAll('.user-card');
+
+      if (userCards.length === 0) {
+        userList.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">👥</div>
+            <div class="empty-state-text">No active users</div>
+          </div>
+        `;
+      }
+    }
+
+    // Toggle sidebar
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      sidebar.classList.toggle('open');
+      const toggle = document.getElementById('sidebarToggle');
+      toggle.textContent = sidebar.classList.contains('open') ? '✕' : '☰';
+    }
+
+    // Toggle dark mode
+    function toggleDarkMode() {
+      document.body.classList.toggle('dark-mode');
+      const toggle = document.querySelector('.dark-mode-toggle');
+      toggle.textContent = document.body.classList.contains('dark-mode') ? '☀️' : '🌙';
+
+      // Save preference
+      localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+    }
+
+    // Start tracking a patient-driver pair
+    function startTrackingPair(patientId, driverId, patientLat, patientLng) {
+      console.log(`[TRACK] 🚑 Starting tracking pair: ${patientId} -> ${driverId}`);
+
+      // Store the tracking pair
+      trackingPairs[patientId] = driverId;
+
+      // If both markers exist, calculate route immediately
+      if (markers[patientId] && markers[driverId]) {
+        calculateTrackingRoute(patientId, driverId);
+      }
+    }
+
+    // Calculate route between patient and driver
+    function calculateTrackingRoute(patientId, driverId) {
+      if (!markers[patientId] || !markers[driverId]) {
+        console.log(`[TRACK] ⚠️ Cannot calculate route: missing markers for ${patientId} or ${driverId}`);
+        return;
+      }
+
+      const patientPos = markers[patientId].getLatLng();
+      const driverPos = markers[driverId].getLatLng();
+
+      // OSRM API endpoint for route calculation
+      const url = `https://router.project-osrm.org/route/v1/driving/${driverPos.lng},${driverPos.lat};${patientPos.lng},${patientPos.lat}?overview=full&geometries=geojson`;
+
+      console.log(`[TRACK] 🗺️ Calculating route from driver to patient`);
+      console.log(`[TRACK] Driver: ${driverPos.lat}, ${driverPos.lng}`);
+      console.log(`[TRACK] Patient: ${patientPos.lat}, ${patientPos.lng}`);
+
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+            const route = data.routes[0];
+            const geometry = route.geometry;
+            const distance = (route.distance / 1000).toFixed(2); // Convert to km
+            const duration = Math.round(route.duration / 60); // Convert to minutes
+
+            console.log(`[TRACK] ✅ Route calculated: ${distance} km, ${duration} min`);
+
+            // Remove existing route if any
+            const routeKey = `route_${patientId}_${driverId}`;
+            if (routes[routeKey]) {
+              map.removeLayer(routes[routeKey]);
+            }
+
+            // Draw route polyline
+            routes[routeKey] = L.geoJSON(geometry, {
+              style: {
+                color: '#ff4444',
+                weight: 4,
+                opacity: 0.8
+              }
+            }).addTo(map);
+
+            // Update tracking info
+            updateTrackingInfo(patientId, driverId, distance, duration);
+            
+            // Proximity Sound Alert for Driver reaching Patient
+            const alertKey = `tracking_${patientId}_${driverId}`;
+            if (distance < 0.5 && !alertPlayed[alertKey]) {
+              alertPlayed[alertKey] = true;
+              try { proximityAlertSound.play(); } catch(e){}
+              alert(`🚑 Ambulance Driver ${driverId} is arriving at Patient ${patientId}!`);
+            } else if (distance > 0.6) {
+              alertPlayed[alertKey] = false;
+            }
+          } else {
+            console.error('[TRACK] ❌ Route calculation failed:', data);
+          }
+        })
+        .catch(error => {
+          console.error('[TRACK] ❌ Route calculation error:', error);
+        });
+    }
+
+    // Update tracking information display
+    function updateTrackingInfo(patientId, driverId, distance, duration) {
+      // Find or create tracking info card
+      let trackingCard = document.getElementById(`tracking_${patientId}_${driverId}`);
+
+      if (!trackingCard) {
+        const userList = document.getElementById('userList');
+        const emptyState = userList.querySelector('.empty-state');
+        if (emptyState) {
+          emptyState.remove();
+        }
+
+        trackingCard = document.createElement('div');
+        trackingCard.className = 'user-card tracking-card';
+        trackingCard.id = `tracking_${patientId}_${driverId}`;
+        userList.appendChild(trackingCard);
+      }
+
+      trackingCard.innerHTML = `
+        <div class="user-header">
+          <div class="user-name">
+            <div class="user-avatar" style="background: linear-gradient(135deg, #ff4444, #ff6666)">🚑</div>
+            Tracking: ${patientId}
+          </div>
+          <span class="status-badge active">Active</span>
+        </div>
+        <div class="user-info">
+          <div class="info-item">
+            <span class="info-label">Driver</span>
+            <span class="info-value">${driverId}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Distance</span>
+            <span class="info-value route">${distance} km</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">ETA</span>
+            <span class="info-value route">${duration} min</span>
+          </div>
+        </div>
+        <div class="last-updated" id="tracking_updated_${patientId}_${driverId}"></div>
+      `;
+
+      // Update timestamp
+      const now = new Date();
+      document.getElementById(`tracking_updated_${patientId}_${driverId}`).textContent =
+        `Last updated: ${now.toLocaleTimeString()}`;
+
+      // If this patient is currently selected, update bottom info panel as well
+      if (activeUserId === patientId) {
+        const infoName = document.getElementById('infoName');
+        const infoDistance = document.getElementById('infoDistance');
+        const infoEta = document.getElementById('infoEta');
+        const infoRoute = document.getElementById('infoRoute');
+
+        if (infoName) infoName.textContent = `Patient: ${patientId}`;
+        if (infoDistance) infoDistance.textContent = `${distance} km`;
+        if (infoEta) infoEta.textContent = `${duration} min`;
+        if (infoRoute) infoRoute.textContent = `Driver: ${driverId}`;
+      }
+    }
+
+    // Handle Follow Toggle Checkbox
+    function handleFollowToggle() {
+      const toggle = document.getElementById('followToggle');
+      if (toggle.checked) {
+        if (!activeUserId) {
+          alert('Please select a user from the sidebar first to follow them!');
+          toggle.checked = false;
+        } else if (markers[activeUserId]) {
+          map.panTo(markers[activeUserId].getLatLng());
+        }
+      }
+    }
+
+    // Screen Wake Lock API
+    async function toggleWakeLock() {
+      const checkbox = document.getElementById('wakeLockToggle');
+      if (checkbox.checked) {
+        try {
+          if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+            console.log('[TRACK] 📱 Screen Wake Lock activated');
+          } else {
+            alert('Wake Lock API not supported in this browser.');
+            checkbox.checked = false;
+          }
+        } catch (err) {
+          console.error(`[TRACK] ❌ Wake Lock error: ${err.name}, ${err.message}`);
+          checkbox.checked = false;
+        }
+      } else {
+        if (wakeLock !== null) {
+          await wakeLock.release();
+          wakeLock = null;
+          console.log('[TRACK] 📱 Screen Wake Lock released');
+        }
+      }
+    }
+
+    // Initialize on page load
+    window.addEventListener('load', function () {
+      console.log('[TRACK] 🚀 Initializing tracking page...');
+      initMap();
+      initWebSocket();
+
+      // Load dark mode preference
+      if (localStorage.getItem('darkMode') === 'true') {
+        document.body.classList.add('dark-mode');
+        document.querySelector('.dark-mode-toggle').textContent = '☀️';
+      }
+    });
+  </script>
+</body>
+
+</html>

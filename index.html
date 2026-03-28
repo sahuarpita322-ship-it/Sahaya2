@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <link rel="manifest" href="manifest.json">
+
+  <title>Sahaya – Local Help & Emergency Services</title>
+
+  <meta name="description"
+    content="Sahaya provides quick access to emergency services, hospitals, blood banks, and government schemes for rural and semi-urban users.">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <style>
+    /* Make the ambulance marker slide smoothly natively */
+    .custom-ambulance {
+      transition: transform 0.3s linear !important;
+      background: transparent !important;
+      border: none !important;
+    }
+    .animated-route {
+      stroke-dasharray: 10, 10;
+      animation: dash 1s linear infinite;
+    }
+    @keyframes dash {
+      to { stroke-dashoffset: -20; }
+    }
+  </style>
+</head>
+
+<body data-page="home">
+  <!-- Top navigation inspired by Lets Explore -->
+  <header class="top-nav" aria-label="Main navigation">
+    <div class="top-nav-inner">
+      <div class="top-nav-logo">
+        <div class="top-nav-logo-mark">S</div>
+        <span>Sahaya</span>
+      </div>
+      <nav class="top-nav-menu" aria-label="Primary">
+        <a href="index.html" class="active">Home</a>
+        <a href="hospital.html">Hospitals</a>
+        <a href="blood.html">Blood</a>
+        <a href="emergency.html">Emergency</a>
+        <a href="schemes.html">Schemes</a>
+        <a href="driver.html">Drivers
+          <button>Go to Driver Panel</button>
+        </a>
+        <a href="user.html">
+          <button>Go to User Page</button>
+        </a>
+        </a>
+        <a href="#" class="top-nav-cta">Help &amp; Support</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="app" role="main">
+    <!-- Hero layout -->
+    <div class="hero-layout">
+      <section class="hero-main" aria-label="Sahaya emergency introduction">
+        <p class="hero-tag">
+          Live assistance
+          <span>Using your current location</span>
+        </p>
+        <h1 class="hero-title">
+          Smart <span>Emergency Help</span> at your fingertips
+        </h1>
+        <p class="hero-subtitle">
+          Quickly reach ambulance, police or fire services and find nearby hospitals,
+          blood banks and government schemes – with simple language and voice guidance.
+        </p>
+
+        <div class="hero-cta-row">
+          <button type="button" class="btn-accent" onclick="callNumber('112')">
+            🚨 Start Emergency Help (112)
+          </button>
+          <button type="button" class="btn-primary"
+            onclick="document.getElementById('quick-help').scrollIntoView({behavior:'smooth'})">
+            ▶ How Sahaya Works
+          </button>
+        </div>
+
+        <div style="margin-top:18px;">
+          <p class="section-title" style="margin-bottom:8px;">Language</p>
+          <div class="language-buttons" role="group" aria-label="Choose language">
+            <button type="button" onclick="setLanguage('en')" aria-pressed="true">English</button>
+            <button type="button" onclick="setLanguage('hi')" aria-pressed="false">हिन्दी</button>
+            <button type="button" onclick="setLanguage('or')" aria-pressed="false">ଓଡିଆ</button>
+          </div>
+
+
+          <button id="voiceBtn" type="button" class="btn-voice">
+            🔊 Listen instructions
+
+
+        </div>
+
+        <!-- Feature grid to fill left column with useful quick actions -->
+        <div class="feature-grid" aria-hidden="false">
+          <button class="feature-card" onclick="navigateTo('hospital.html')">
+            <strong>🏥 Nearby Hospitals</strong>
+            <span>View & call hospitals</span>
+          </button>
+
+          <button class="feature-card" onclick="navigateTo('blood.html')">
+            <strong>🩸 Blood Banks</strong>
+            <span>Find donor centres</span>
+          </button>
+
+          <button class="feature-card" onclick="copyLocation()">
+            <strong>📍 Share Location</strong>
+            <span>Copy live map link</span>
+          </button>
+
+          <button class="feature-card" onclick="showFirstAidTip()">
+            <strong>🩺 First-aid Tip</strong>
+            <span>Quick tip for emergencies</span>
+          </button>
+
+          <div id="firstAidTip" class="tip-box" role="status" aria-live="polite">Need help? Tap "First-aid Tip".</div>
+        </div>
+
+        <!-- Location Tracking Services -->
+        <div style="margin-top: 30px;">
+          <p class="section-label" style="margin-bottom: 15px;">📍 Location Tracking Services</p>
+          <div class="feature-grid" style="grid-template-columns: repeat(2, 1fr); gap: 10px;">
+            <a href="share.html" class="feature-card"
+              style="text-decoration: none; display: block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
+              <strong style="font-size: 18px;">📤 Share Location</strong>
+              <span style="opacity: 0.9;">Start sharing your location</span>
+            </a>
+            <a href="track.html" class="feature-card"
+              style="text-decoration: none; display: block; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; border: none;">
+              <strong style="font-size: 18px;">📍 Track Locations</strong>
+              <span style="opacity: 0.9;">View live location tracking</span>
+            </a>
+            <a href="driver.html" class="feature-card"
+              style="text-decoration: none; display: block; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none;">
+              <strong style="font-size: 18px;">🚑 Driver Panel</strong>
+              <span style="opacity: 0.9;">Ambulance driver dashboard</span>
+            </a>
+            <a href="user.html" class="feature-card"
+              style="text-decoration: none; display: block; background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: white; border: none;">
+              <strong style="font-size: 18px;">🚨 Emergency Request</strong>
+              <span style="opacity: 0.9;">Request ambulance help</span>
+            </a>
+            <a href="volunteer.html" class="feature-card"
+              style="text-decoration: none; display: block; background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); color: white; border: none; grid-column: span 2;">
+              <strong style="font-size: 18px;">⛑️ Volunteer Responder</strong>
+              <span style="opacity: 0.9;">Act as a local first-aid responder</span>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section class="hero-visual" aria-label="Live location and preview">
+        <div class="hero-map-card">
+          <p class="section-label">📍 Your live location</p>
+          <div id="userMap" class="map-shell"></div>
+        </div>
+        <div class="hero-image-card">
+          <img src="hero-emergency.svg" alt="Illustration of ambulance, police and emergency helpers"
+            class="hero-illustration" loading="lazy">
+          <p class="hero-image-caption">
+            Visual preview – replace <code>hero-emergency.png</code> with your own artwork of emergency services.
+          </p>
+        </div>
+      </section>
+    </div>
+
+    <!-- Immediate emergency buttons -->
+    <section id="quick-help" aria-label="Quick emergency help" style="margin-top:22px;">
+
+      <button id="setPasswordBtn">🔑 Set / Change Child Lock Password</button>
+
+      <button id="childLockBtn">🔓 Child Lock OFF</button>
+      <p class="section-label">Immediate help</p>
+      <div class="card emergency">
+        <div class="emergency-row">
+          <button type="button" class="btn-accent emergency-ambulance" onclick="callNumber('108')">
+            🚑 Ambulance
+            <span>Call 108 now</span>
+          </button>
+          <button type="button" class="btn-primary emergency-police" onclick="callNumber('100')">
+            🚓 Police
+            <span>Call 100 now</span>
+          </button>
+          <button type="button" class="btn-primary emergency-fire" onclick="callNumber('101')">
+            🔥 Fire Brigade
+            <span>Call 101 now</span>
+          </button>
+        </div>
+        <div id="emergencyButtons">
+          <!-- Ambulance, Police, Fire buttons -->
+        </div>
+        <button type="button" class="btn-outline" onclick="openEmergencyAlertOptions()">
+          📡 Send emergency alert with my live location
+        </button>
+        <button type="button" class="btn-accent" id="sendEmergencyBtn" onclick="sendEmergency()"
+          style="margin-top: 10px; width: 100%;">
+          🚨 Send Emergency
+        </button>
+        <div id="ambulanceStatus"
+          style="margin-top: 10px; padding: 10px; background: #f0f0f0; border-radius: 5px; display: none;">
+          <p id="statusText">Waiting for driver...</p>
+          <p id="ambulanceInfo" style="margin-top: 5px; font-size: 14px; display: none; font-weight: 600;">
+            🚗 Distance: <span id="ambDistance" style="color: #2e86de;">-</span> | ⏳ ETA: <span id="ambEta" style="color: #2e86de;">-</span>
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Navigation to other emergency services pages -->
+    <section aria-label="Other emergency services" style="margin-top:2px;">
+      <p class="section-label">More help nearby</p>
+      <div class="card">
+        <div class="nav-links">
+          <a href="blood.html">
+            <strong>🩸 Blood Banks</strong>
+            <span>Find nearby blood banks &amp; contacts</span>
+          </a>
+          <a href="hospital.html">
+            <strong>🏥 Hospitals</strong>
+            <span>Government &amp; private hospitals</span>
+          </a>
+          <a href="emergency.html">
+            <strong>📞 Emergency Numbers</strong>
+            <span>National &amp; local helpline list</span>
+          </a>
+          <a href="schemes.html">
+            <strong>🏛️ Govt. Health Schemes</strong>
+            <span>Free / low-cost health support</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+    let isLocked = false;
+    let savedPassword = localStorage.getItem("childLockPassword");
+
+    // SET / CHANGE PASSWORD
+    document.getElementById("setPasswordBtn").onclick = () => {
+      const newPass = prompt("Set Child Lock password (min 4 characters):");
+
+      if (newPass && newPass.length >= 4) {
+        localStorage.setItem("childLockPassword", newPass);
+        savedPassword = newPass;
+        alert("Password saved successfully!");
+      } else {
+        alert("Password must be at least 4 characters.");
+      }
+    };
+
+    // CHILD LOCK ON / OFF
+    document.getElementById("childLockBtn").onclick = function () {
+
+      if (!savedPassword) {
+        alert("Please set a password first!");
+        return;
+      }
+
+      if (!isLocked) {
+        // TURN ON (no password needed)
+        isLocked = true;
+        document.getElementById("emergencyButtons").classList.add("locked");
+        this.innerText = "🔒 Child Lock ON";
+      } else {
+        // TURN OFF (password required)
+        const entered = prompt("Enter Child Lock password:");
+
+        if (entered === savedPassword) {
+          isLocked = false;
+          document.getElementById("emergencyButtons").classList.remove("locked");
+          this.innerText = "🔓 Child Lock OFF";
+        } else {
+          alert("Incorrect password!");
+        }
+      }
+    };
+  </script>
+  </script>
+  <script src="script.js"></script>
+  <!-- Local voice assistant UI -->
+  <div id="assistant" class="assistant" aria-hidden="false">
+    <button id="assistantToggle" class="assistant-toggle" aria-pressed="false" title="Voice assistant">
+      🤖
+    </button>
+
+    <div id="assistantPanel" class="assistant-panel" hidden>
+      <div class="assistant-header">
+        <strong>SAHAYA Assistant</strong>
+        <button id="assistantClose" class="assistant-close" aria-label="Close">✕</button>
+      </div>
+      <div id="assistantStatus" class="assistant-status">Tap the mic and speak</div>
+      <div id="assistantTranscript" class="assistant-transcript" aria-live="polite"></div>
+      <div id="assistantResponse" class="assistant-response"></div>
+      <div class="assistant-actions">
+        <button id="assistantMic" class="btn-voice">🎤 Start Listening</button>
+        <button id="assistantStop" class="btn-outline" hidden>Stop</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("sw.js")
+        .then(() => console.log("Service Worker Registered"))
+        .catch(err => console.log("Service Worker Failed:", err));
+    }
+  </script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker
+          .register("sw.js")
+          .then(reg => {
+            console.log("Service Worker registered:", reg.scope);
+          })
+          .catch(err => {
+            console.log("Service Worker registration failed:", err);
+          });
+      });
+    }
+  </script>
+  <script>
+    // WebSocket connection for emergency tracking
+    let ws = null;
+    let userMap = null;
+    let userMarker = null;
+    let ambulanceMarker = null;
+    let userLocation = null;
+    let routeLayer = null;
+    let lastRouteCalcTime = 0;
+    let myUserId = "user_" + Math.floor(Math.random() * 100000);
+
+    // Initialize WebSocket connection
+    function initWebSocket() {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        return; // Already connected
+      }
+
+      const WS_PROTOCOL = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const WS_PORT = window.location.port ? `:${window.location.port}` : "";
+      ws = new WebSocket(`${WS_PROTOCOL}//${window.location.hostname}${WS_PORT}`);
+
+      ws.onopen = function () {
+        console.log("WebSocket connected (Tracker Active)");
+        ws.send(JSON.stringify({ type: 'tracker' }));
+      };
+
+      ws.onmessage = function (event) {
+        try {
+          const data = JSON.parse(event.data);
+
+          // Only listen to 'driverLocation' to avoid snapping the ambulance to the user's own location updates
+          if (data.type === "driverLocation") {
+            console.log('[HOME] 🚑 Ambulance moving to:', data.lat, data.lng);
+            updateAmbulanceLocation(data.lat, data.lng);
+          }
+
+          if (data.type === "requestAccepted") {
+            document.getElementById("statusText").textContent = "🚑 Ambulance is on the way!";
+            document.getElementById("ambulanceStatus").style.display = "block";
+            document.getElementById("ambulanceStatus").style.background = "#d4edda";
+            document.getElementById("ambulanceInfo").style.display = "block";
+            if (data.lat && data.lng) updateAmbulanceLocation(data.lat, data.lng);
+          }
+
+          if (data.type === "requestRejected") {
+            document.getElementById("statusText").textContent = "❌ Request rejected. Trying another driver...";
+            document.getElementById("ambulanceStatus").style.display = "block";
+            document.getElementById("ambulanceStatus").style.background = "#f8d7da";
+            document.getElementById("ambulanceInfo").style.display = "none";
+          }
+        } catch (err) {
+          console.error("Error parsing WebSocket message:", err);
+        }
+      };
+
+      ws.onerror = function (error) {
+        console.error("WebSocket error:", error);
+      };
+
+      ws.onclose = function () {
+        console.log("WebSocket closed. Reconnecting...");
+        setTimeout(initWebSocket, 3000); // Reconnect after 3 seconds
+      };
+    }
+
+    // Update ambulance location and calculate route
+    function updateAmbulanceLocation(lat, lng) {
+      if (!userMap) return;
+      
+      if (ambulanceMarker) {
+        // Native CSS transition makes this buttery smooth now
+        ambulanceMarker.setLatLng([lat, lng]);
+      } else {
+        ambulanceMarker = L.marker([lat, lng], {
+          icon: L.divIcon({
+            className: 'custom-ambulance',
+            html: `<div style="font-size: 32px; background: white; border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">🚑</div>`,
+            iconSize: [40, 40],
+            iconAnchor: [20, 20],
+            popupAnchor: [0, -20]
+          }),
+          zIndexOffset: 1000
+        }).addTo(userMap).bindPopup("🚑 Ambulance Location").openPopup();
+      }
+
+      // Auto-fit bounds to show both user and ambulance
+      if (userLocation && userMarker) {
+        const now = Date.now();
+        if (now - lastRouteCalcTime > 3000) {
+          lastRouteCalcTime = now;
+          const group = new L.featureGroup([userMarker, ambulanceMarker]);
+          userMap.fitBounds(group.getBounds().pad(0.1));
+          calculateRouteToUser(lat, lng);
+        }
+      }
+    }
+
+    // OSRM Public API to fetch routing, distance and ETA
+    function calculateRouteToUser(driverLat, driverLng) {
+      if (!userLocation) return;
+      const url = `https://router.project-osrm.org/route/v1/driving/${driverLng},${driverLat};${userLocation.lng},${userLocation.lat}?overview=full&geometries=geojson`;
+
+      fetch(url).then(res => res.json()).then(data => {
+        if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+          const route = data.routes[0];
+          
+          if (route.distance < 50) {
+            document.getElementById("statusText").textContent = "🚑 Ambulance has arrived at your location!";
+            document.getElementById("ambDistance").textContent = "Arrived";
+            document.getElementById("ambEta").textContent = "0 min";
+          } else {
+            document.getElementById("ambDistance").textContent = (route.distance / 1000).toFixed(2) + " km";
+            document.getElementById("ambEta").textContent = Math.round(route.duration / 60) + " min";
+          }
+          
+          if (routeLayer) userMap.removeLayer(routeLayer);
+          routeLayer = L.geoJSON(route.geometry, { style: { color: '#ff4444', weight: 4, opacity: 0.8, dashArray: '10, 10', className: 'animated-route' } }).addTo(userMap);
+        }
+      }).catch(err => console.log("Route calculation error:", err));
+    }
+
+    // Initialize map
+    function initMap() {
+      const mapContainer = document.getElementById("userMap");
+      if (!mapContainer) return;
+
+      // Initialize Leaflet map
+      userMap = L.map("userMap").setView([20.2961, 85.8245], 13);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+      }).addTo(userMap);
+
+      // Get user location
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          function (position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            userLocation = { lat, lng };
+
+            userMap.setView([lat, lng], 15);
+            userMarker = L.marker([lat, lng]).addTo(userMap)
+              .bindPopup("📍 Your Location")
+              .openPopup();
+          },
+          function (error) {
+            console.error("Geolocation error:", error);
+            alert("Please enable location access to use emergency tracking");
+          }
+        );
+      }
+    }
+
+    // Send emergency request
+    function sendEmergency() {
+      if (!userLocation) {
+        // Try to get location first
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            function (position) {
+              userLocation = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+              };
+              sendEmergencyRequest();
+            },
+            function (error) {
+              alert("Please enable location access to send emergency request");
+            }
+          );
+        } else {
+          alert("Geolocation is not supported by your browser");
+        }
+        return;
+      }
+
+      sendEmergencyRequest();
+    }
+
+    function sendEmergencyRequest() {
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        alert("Connecting to server... Please try again in a moment.");
+        initWebSocket();
+        return;
+      }
+
+      // First, register as an active user to get live driver locations
+      ws.send(JSON.stringify({
+        type: "location",
+        userId: myUserId,
+        lat: userLocation.lat,
+        lng: userLocation.lng
+      }));
+
+      const message = {
+        type: "emergency",
+        userId: myUserId,
+        lat: userLocation.lat,
+        lng: userLocation.lng
+      };
+
+      ws.send(JSON.stringify(message));
+      console.log("Emergency sent:", message);
+      
+      // Ensure tracker is active
+      if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'tracker' }));
+
+      document.getElementById("statusText").textContent = "🚨 Emergency sent! Waiting for driver...";
+      document.getElementById("ambulanceStatus").style.display = "block";
+      document.getElementById("ambulanceStatus").style.background = "#fff3cd";
+      document.getElementById("ambulanceInfo").style.display = "none";
+      
+      // Scroll up to view the map
+      document.getElementById("userMap").scrollIntoView({behavior: "smooth"});
+    }
+
+    // Initialize on page load
+    window.addEventListener("DOMContentLoaded", function () {
+      initMap();
+      initWebSocket();
+    });
+  </script>
+</body>
+
+</html>
