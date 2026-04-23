@@ -1,21 +1,23 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en" class="light">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sahaya – Emergency Dashboard</title>
   <link rel="manifest" href="manifest.json">
-
-  <title>Sahaya – Local Help & Emergency Services</title>
-
   <meta name="description"
     content="Sahaya provides quick access to emergency services, hospitals, blood banks, and government schemes for rural and semi-urban users.">
 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <link rel="stylesheet" href="style.css">
+  <!-- Modern Styles & Icons -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="../modern-style.css">
+  
+  <!-- Leaflet Map Integration -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  
   <style>
-    /* Make the ambulance marker slide smoothly natively */
     .custom-ambulance {
       transition: transform 0.3s linear !important;
       background: transparent !important;
@@ -28,303 +30,383 @@
     @keyframes dash {
       to { stroke-dashoffset: -20; }
     }
+    /* Child Lock Hidden State */
+    .locked {
+      opacity: 0.5;
+      pointer-events: none;
+      filter: grayscale(100%);
+    }
+    /* Ensure map stays behind navbars */
+    .leaflet-container {
+      z-index: 1 !important;
+    }
   </style>
 </head>
 
-<body data-page="home">
-  <!-- Top navigation inspired by Lets Explore -->
-  <header class="top-nav" aria-label="Main navigation">
-    <div class="top-nav-inner">
-      <div class="top-nav-logo">
-        <div class="top-nav-logo-mark">S</div>
-        <span>Sahaya</span>
-      </div>
-      <nav class="top-nav-menu" aria-label="Primary">
-        <a href="index.html" class="active">Home</a>
-        <a href="hospital.html">Hospitals</a>
-        <a href="blood.html">Blood</a>
-        <a href="emergency.html">Emergency</a>
-        <a href="schemes.html">Schemes</a>
-        <a href="driver.html">Drivers
-          <button>Go to Driver Panel</button>
-        </a>
-        <a href="user.html">
-          <button>Go to User Page</button>
-        </a>
-        </a>
-        <a href="#" class="top-nav-cta">Help &amp; Support</a>
-      </nav>
-    </div>
-  </header>
+<body class="relative min-h-screen text-slate-800 dark:text-slate-100 overflow-x-hidden transition-colors duration-500 font-sans pb-20 md:pb-0" data-page="home">
+  
+  <!-- Animated Mesh Background & Particles -->
+  <div class="mesh-bg"></div>
+  <div id="particles" class="fixed inset-0 z-[-1] pointer-events-none overflow-hidden"></div>
 
-  <div class="app" role="main">
-    <!-- Hero layout -->
-    <div class="hero-layout">
-      <section class="hero-main" aria-label="Sahaya emergency introduction">
-        <p class="hero-tag">
-          Live assistance
-          <span>Using your current location</span>
-        </p>
-        <h1 class="hero-title">
-          Smart <span>Emergency Help</span> at your fingertips
+  <!-- Top Navbar -->
+  <nav class="fixed top-0 w-full z-50 glass-nav border-b border-white/20 dark:border-white/10 transition-all duration-300" id="navbar">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <!-- Logo -->
+      <div class="flex items-center gap-3 cursor-pointer group" onclick="window.scrollTo(0,0)">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform">
+          <i data-lucide="shield-plus"></i>
+        </div>
+        <span class="text-xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 tracking-tight">
+          Sahaya
+        </span>
+      </div>
+
+      <!-- Desktop Menu -->
+      <div class="hidden md:flex items-center gap-6 text-sm font-medium">
+        <a href="index.html" class="text-blue-600 dark:text-blue-400 font-bold transition">Home</a>
+        <a href="hospital.html" class="hover:text-blue-600 dark:hover:text-blue-400 transition">Hospitals</a>
+        <a href="blood.html" class="hover:text-blue-600 dark:hover:text-blue-400 transition">Blood</a>
+        <a href="schemes.html" class="hover:text-blue-600 dark:hover:text-blue-400 transition">Schemes</a>
+        <a href="driver.html" class="px-4 py-2 rounded-full bg-white/20 dark:bg-slate-800/40 hover:bg-white/30 border border-white/30 transition shadow-sm">Driver Panel</a>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center gap-4">
+        <!-- Live Location Toggle -->
+        <div class="hidden sm:flex items-center gap-2" title="Broadcast Location">
+          <span class="text-xs font-semibold opacity-70">Live</span>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" class="sr-only peer" id="live-toggle">
+            <div class="w-9 h-5 bg-slate-300/50 peer-focus:outline-none rounded-full peer dark:bg-slate-700/50 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500 shadow-inner"></div>
+          </label>
+        </div>
+        <!-- Dark Mode Toggle -->
+        <button id="theme-toggle" class="p-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 transition ripple" aria-label="Toggle Dark Mode">
+          <i data-lucide="moon" class="w-5 h-5 dark:hidden"></i>
+          <i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12 animate-fade-in-up" role="main">
+    
+    <!-- Hero Section -->
+    <div class="flex flex-col lg:flex-row items-center gap-12 py-10">
+      
+      <!-- Left Text & Actions -->
+      <div class="flex-1 space-y-6 z-10">
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass text-xs font-bold text-blue-600 dark:text-blue-400">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+          </span>
+          Live Location Integrated
+        </div>
+        
+        <h1 class="text-5xl md:text-6xl font-extrabold leading-tight">
+          Smart <span class="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500">Emergency Help</span><br>at your fingertips.
         </h1>
-        <p class="hero-subtitle">
-          Quickly reach ambulance, police or fire services and find nearby hospitals,
-          blood banks and government schemes – with simple language and voice guidance.
+        
+        <p class="text-lg opacity-80 max-w-xl">
+          Quickly reach ambulance, police, or fire services and find nearby hospitals, blood banks, and government schemes — with live driver tracking and instant notifications.
         </p>
 
-        <div class="hero-cta-row">
-          <button type="button" class="btn-accent" onclick="callNumber('112')">
-            🚨 Start Emergency Help (112)
+        <div class="flex flex-wrap gap-4 pt-4">
+          <button type="button" class="ripple px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 text-white font-bold shadow-[0_8px_20px_rgba(225,29,72,0.4)] hover:shadow-[0_12px_25px_rgba(225,29,72,0.6)] hover:-translate-y-1 transition-all flex items-center gap-2" id="sendEmergencyBtn" onclick="sendEmergency()">
+            <i data-lucide="siren" class="w-5 h-5"></i> Send SOS Alert
           </button>
-          <button type="button" class="btn-primary"
-            onclick="document.getElementById('quick-help').scrollIntoView({behavior:'smooth'})">
-            ▶ How Sahaya Works
+          <button type="button" class="ripple glass-button px-6 py-3 rounded-xl hover:bg-white/20 transition-all font-semibold flex items-center gap-2 text-slate-800 dark:text-slate-100" onclick="callNumber('112')">
+            <i data-lucide="phone-call" class="w-5 h-5 text-red-500"></i> Call 112
           </button>
         </div>
 
-        <div style="margin-top:18px;">
-          <p class="section-title" style="margin-bottom:8px;">Language</p>
-          <div class="language-buttons" role="group" aria-label="Choose language">
-            <button type="button" onclick="setLanguage('en')" aria-pressed="true">English</button>
-            <button type="button" onclick="setLanguage('hi')" aria-pressed="false">हिन्दी</button>
-            <button type="button" onclick="setLanguage('or')" aria-pressed="false">ଓଡିଆ</button>
+        <div class="mt-4 grid gap-4 sm:grid-cols-2">
+          <div id="ambulanceStatus" class="hidden glass p-4 rounded-2xl border-l-4 border-yellow-500 transition-all duration-500 shadow-sm">
+            <div class="flex items-center gap-3 mb-2">
+              <i data-lucide="info" class="w-5 h-5 text-yellow-600 dark:text-yellow-400 animate-pulse"></i>
+              <p id="statusText" class="font-bold text-sm">Waiting for driver...</p>
+            </div>
+            <p id="ambulanceInfo" class="text-xs font-semibold text-blue-600 dark:text-blue-400 hidden ml-8">
+              🚗 Distance: <span id="ambDistance">-</span> | ⏳ ETA: <span id="ambEta">-</span>
+            </p>
           </div>
-
-
-          <button id="voiceBtn" type="button" class="btn-voice">
-            🔊 Listen instructions
-
-
-        </div>
-
-        <!-- Feature grid to fill left column with useful quick actions -->
-        <div class="feature-grid" aria-hidden="false">
-          <button class="feature-card" onclick="navigateTo('hospital.html')">
-            <strong>🏥 Nearby Hospitals</strong>
-            <span>View & call hospitals</span>
-          </button>
-
-          <button class="feature-card" onclick="navigateTo('blood.html')">
-            <strong>🩸 Blood Banks</strong>
-            <span>Find donor centres</span>
-          </button>
-
-          <button class="feature-card" onclick="copyLocation()">
-            <strong>📍 Share Location</strong>
-            <span>Copy live map link</span>
-          </button>
-
-          <button class="feature-card" onclick="showFirstAidTip()">
-            <strong>🩺 First-aid Tip</strong>
-            <span>Quick tip for emergencies</span>
-          </button>
-
-          <div id="firstAidTip" class="tip-box" role="status" aria-live="polite">Need help? Tap "First-aid Tip".</div>
-        </div>
-
-        <!-- Location Tracking Services -->
-        <div style="margin-top: 30px;">
-          <p class="section-label" style="margin-bottom: 15px;">📍 Location Tracking Services</p>
-          <div class="feature-grid" style="grid-template-columns: repeat(2, 1fr); gap: 10px;">
-            <a href="share.html" class="feature-card"
-              style="text-decoration: none; display: block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
-              <strong style="font-size: 18px;">📤 Share Location</strong>
-              <span style="opacity: 0.9;">Start sharing your location</span>
-            </a>
-            <a href="track.html" class="feature-card"
-              style="text-decoration: none; display: block; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; border: none;">
-              <strong style="font-size: 18px;">📍 Track Locations</strong>
-              <span style="opacity: 0.9;">View live location tracking</span>
-            </a>
-            <a href="driver.html" class="feature-card"
-              style="text-decoration: none; display: block; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none;">
-              <strong style="font-size: 18px;">🚑 Driver Panel</strong>
-              <span style="opacity: 0.9;">Ambulance driver dashboard</span>
-            </a>
-            <a href="user.html" class="feature-card"
-              style="text-decoration: none; display: block; background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: white; border: none;">
-              <strong style="font-size: 18px;">🚨 Emergency Request</strong>
-              <span style="opacity: 0.9;">Request ambulance help</span>
-            </a>
-            <a href="volunteer.html" class="feature-card"
-              style="text-decoration: none; display: block; background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); color: white; border: none; grid-column: span 2;">
-              <strong style="font-size: 18px;">⛑️ Volunteer Responder</strong>
-              <span style="opacity: 0.9;">Act as a local first-aid responder</span>
-            </a>
+          <div class="glass p-4 rounded-2xl border border-white/20 bg-white/15 dark:bg-slate-900/40 shadow-sm hidden sm:block">
+            <p class="text-xs uppercase tracking-[0.25em] opacity-70 mb-2">Local rescue network</p>
+            <p class="font-bold text-lg">24/7 coordination</p>
           </div>
         </div>
-      </section>
 
-      <section class="hero-visual" aria-label="Live location and preview">
-        <div class="hero-map-card">
-          <p class="section-label">📍 Your live location</p>
-          <div id="userMap" class="map-shell"></div>
+        <div class="flex flex-wrap items-center gap-4 mt-2">
+          <div class="flex bg-white/20 dark:bg-slate-800/40 rounded-full p-1 border border-white/20 shadow-sm" role="group" aria-label="Choose language">
+            <button type="button" onclick="setLanguage('en')" class="px-4 py-1 text-xs font-bold rounded-full hover:bg-white/40 transition">English</button>
+            <button type="button" onclick="setLanguage('hi')" class="px-4 py-1 text-xs font-bold rounded-full hover:bg-white/40 transition">हिन्दी</button>
+            <button type="button" onclick="setLanguage('or')" class="px-4 py-1 text-xs font-bold rounded-full hover:bg-white/40 transition">ଓଡିଆ</button>
+          </div>
+          <button id="voiceBtn" type="button" class="glass-button px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 hover:bg-white/30 transition shadow-sm">
+            <i data-lucide="volume-2" class="w-4 h-4"></i> Instructions
+          </button>
         </div>
-        <div class="hero-image-card">
-          <img src="hero-emergency.svg" alt="Illustration of ambulance, police and emergency helpers"
-            class="hero-illustration" loading="lazy">
-          <p class="hero-image-caption">
-            Visual preview – replace <code>hero-emergency.png</code> with your own artwork of emergency services.
-          </p>
+      </div>
+
+      <!-- Right Live Map -->
+      <div class="flex-1 w-full z-10 animate-fade-in-up relative">
+        <div class="glass-card p-3 w-full border-white/30 shadow-[0_8px_32px_0_rgba(31,38,135,0.15)] relative group overflow-hidden">
+          <div class="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-purple-400/10 pointer-events-none"></div>
+          <div class="flex justify-between items-center px-2 pb-2 relative">
+            <p class="text-sm font-bold opacity-80 flex items-center gap-2"><i data-lucide="map-pin" class="w-4 h-4 text-red-500"></i> Live Dispatch Map</p>
+            <button onclick="copyLocation()" class="glass-button text-xs font-semibold px-3 py-1 rounded-full hover:bg-white/40 transition">Share</button>
+          </div>
+          <!-- Leaflet Map Container -->
+          <div id="userMap" class="w-full h-[300px] md:h-[400px] rounded-xl overflow-hidden relative z-0"></div>
         </div>
-      </section>
+
+        <div class="glass-card absolute -top-8 right-0 hidden xl:flex flex-col gap-3 p-4 w-[240px] border-white/20 shadow-xl float-animation">
+          <div class="text-xs uppercase tracking-[0.28em] opacity-70">Driver status</div>
+          <div class="flex items-center gap-3">
+            <span class="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-600 flex items-center justify-center"><i data-lucide="user-check" class="w-5 h-5"></i></span>
+            <div>
+              <p class="font-bold">Driver found</p>
+              <p class="text-sm opacity-70">Nearby responder en route</p>
+            </div>
+          </div>
+          <div class="flex items-center justify-between text-sm opacity-80">
+            <span>ETA</span>
+            <span class="font-bold">4 mins</span>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Immediate emergency buttons -->
-    <section id="quick-help" aria-label="Quick emergency help" style="margin-top:22px;">
-
-      <button id="setPasswordBtn">🔑 Set / Change Child Lock Password</button>
-
-      <button id="childLockBtn">🔓 Child Lock OFF</button>
-      <p class="section-label">Immediate help</p>
-      <div class="card emergency">
-        <div class="emergency-row">
-          <button type="button" class="btn-accent emergency-ambulance" onclick="callNumber('108')">
-            🚑 Ambulance
-            <span>Call 108 now</span>
+    <!-- Immediate Help Row & Controls -->
+    <div class="mt-4 mb-10 flex flex-col md:flex-row justify-between items-center gap-4">
+      <div class="flex items-center gap-3">
+        <h2 class="text-sm font-bold uppercase tracking-widest opacity-60 ml-2">Quick Dial Help</h2>
+        <!-- Security Child Lock -->
+        <div class="glass px-3 py-1 rounded-full flex items-center gap-2">
+          <button id="setPasswordBtn" class="text-xs font-semibold hover:text-blue-500 transition border-r border-white/20 pr-2">Set PIN</button>
+          <button id="childLockBtn" class="text-xs font-semibold text-green-600 dark:text-green-400 flex items-center gap-1 hover:opacity-70 transition">
+            <i data-lucide="unlock" id="lockIcon" class="w-3 h-3"></i> <span>Unlocked</span>
           </button>
-          <button type="button" class="btn-primary emergency-police" onclick="callNumber('100')">
-            🚓 Police
-            <span>Call 100 now</span>
-          </button>
-          <button type="button" class="btn-primary emergency-fire" onclick="callNumber('101')">
-            🔥 Fire Brigade
-            <span>Call 101 now</span>
-          </button>
-        </div>
-        <div id="emergencyButtons">
-          <!-- Ambulance, Police, Fire buttons -->
-        </div>
-        <button type="button" class="btn-outline" onclick="openEmergencyAlertOptions()">
-          📡 Send emergency alert with my live location
-        </button>
-        <button type="button" class="btn-accent" id="sendEmergencyBtn" onclick="sendEmergency()"
-          style="margin-top: 10px; width: 100%;">
-          🚨 Send Emergency
-        </button>
-        <div id="ambulanceStatus"
-          style="margin-top: 10px; padding: 10px; background: #f0f0f0; border-radius: 5px; display: none;">
-          <p id="statusText">Waiting for driver...</p>
-          <p id="ambulanceInfo" style="margin-top: 5px; font-size: 14px; display: none; font-weight: 600;">
-            🚗 Distance: <span id="ambDistance" style="color: #2e86de;">-</span> | ⏳ ETA: <span id="ambEta" style="color: #2e86de;">-</span>
-          </p>
         </div>
       </div>
-    </section>
+      <button class="text-xs font-bold glass px-4 py-2 rounded-full text-blue-600 dark:text-blue-400 hover:bg-white/30 transition" onclick="showFirstAidTip()">
+        🩺 Random First-Aid Tip
+      </button>
+    </div>
+    <div id="firstAidTip" class="text-sm font-medium mb-6 px-4 border-l-2 border-blue-500 text-slate-600 dark:text-slate-300">Need help? Tap "Random First-Aid Tip".</div>
 
-    <!-- Navigation to other emergency services pages -->
-    <section aria-label="Other emergency services" style="margin-top:2px;">
-      <p class="section-label">More help nearby</p>
-      <div class="card">
-        <div class="nav-links">
-          <a href="blood.html">
-            <strong>🩸 Blood Banks</strong>
-            <span>Find nearby blood banks &amp; contacts</span>
-          </a>
-          <a href="hospital.html">
-            <strong>🏥 Hospitals</strong>
-            <span>Government &amp; private hospitals</span>
-          </a>
-          <a href="emergency.html">
-            <strong>📞 Emergency Numbers</strong>
-            <span>National &amp; local helpline list</span>
-          </a>
-          <a href="schemes.html">
-            <strong>🏛️ Govt. Health Schemes</strong>
-            <span>Free / low-cost health support</span>
-          </a>
+    <!-- Emergency Quick Actions -->
+    <div id="emergencyButtons" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 transition-all duration-300">
+      <!-- Ambulance -->
+      <button class="glass-button glass-card group p-6 text-left overflow-hidden bg-gradient-to-br hover:from-red-500/10 hover:to-rose-600/10 border-red-500/20" onclick="callNumber('108')">
+        <div class="absolute -right-6 -top-6 w-24 h-24 bg-red-500/20 rounded-full blur-xl group-hover:scale-150 transition-transform"></div>
+        <div class="w-12 h-12 rounded-xl bg-red-500/20 text-red-600 dark:text-red-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+          <i data-lucide="ambulance"></i>
         </div>
+        <h3 class="text-xl font-bold mb-1">Call Ambulance</h3>
+        <p class="text-sm opacity-70 font-semibold">Dial 108</p>
+      </button>
+      
+      <!-- Police -->
+      <button class="glass-button glass-card group p-6 text-left bg-gradient-to-br hover:from-blue-500/10 hover:to-indigo-600/10 border-blue-500/20" onclick="callNumber('100')">
+        <div class="absolute -right-6 -top-6 w-24 h-24 bg-blue-500/20 rounded-full blur-xl group-hover:scale-150 transition-transform"></div>
+        <div class="w-12 h-12 rounded-xl bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+          <i data-lucide="shield-alert"></i>
+        </div>
+        <h3 class="text-xl font-bold mb-1">Call Police</h3>
+        <p class="text-sm opacity-70 font-semibold">Dial 100</p>
+      </button>
+
+      <!-- Fire -->
+      <button class="glass-button glass-card group p-6 text-left bg-gradient-to-br hover:from-orange-500/10 hover:to-amber-600/10 border-orange-500/20" onclick="callNumber('101')">
+        <div class="absolute -right-6 -top-6 w-24 h-24 bg-orange-500/20 rounded-full blur-xl group-hover:scale-150 transition-transform"></div>
+        <div class="w-12 h-12 rounded-xl bg-orange-500/20 text-orange-600 dark:text-orange-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+          <i data-lucide="flame"></i>
+        </div>
+        <h3 class="text-xl font-bold mb-1">Fire Brigade</h3>
+        <p class="text-sm opacity-70 font-semibold">Dial 101</p>
+      </button>
+    </div>
+
+    <!-- Dashboard Features -->
+    <div class="mb-12">
+      <h2 class="text-sm font-bold uppercase tracking-widest opacity-60 mb-6 ml-2">Services & Features</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        
+        <a href="share.html" class="glass-card p-6 group block text-left">
+          <div class="w-10 h-10 rounded-lg bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-4 group-hover:scale-110 transition">
+            <i data-lucide="share-2"></i>
+          </div>
+          <h4 class="font-bold text-lg mb-1">Share Location</h4>
+          <p class="text-sm opacity-70 mb-4">Send link to contacts</p>
+          <div class="w-full h-1 bg-white/20 rounded overflow-hidden"><div class="w-1/3 h-full bg-indigo-500"></div></div>
+        </a>
+
+        <a href="track.html" class="glass-card p-6 group block text-left">
+          <div class="w-10 h-10 rounded-lg bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 flex items-center justify-center mb-4 group-hover:scale-110 transition">
+            <i data-lucide="map"></i>
+          </div>
+          <h4 class="font-bold text-lg mb-1">Track Live</h4>
+          <p class="text-sm opacity-70 mb-4">Monitor active routes</p>
+          <div class="w-full h-1 bg-white/20 rounded overflow-hidden"><div class="w-2/3 h-full bg-cyan-500"></div></div>
+        </a>
+
+        <a href="hospital.html" class="glass-card p-6 group block text-left">
+          <div class="w-10 h-10 rounded-lg bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-4 group-hover:scale-110 transition">
+            <i data-lucide="building-2"></i>
+          </div>
+          <h4 class="font-bold text-lg mb-1">Hospitals</h4>
+          <p class="text-sm opacity-70 mb-4">Nearby care centers</p>
+          <div class="w-full h-1 bg-white/20 rounded overflow-hidden"><div class="w-1/2 h-full bg-emerald-500"></div></div>
+        </a>
+
+        <a href="volunteer.html" class="glass-card p-6 group block text-left">
+          <div class="w-10 h-10 rounded-lg bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-4 group-hover:scale-110 transition">
+            <i data-lucide="users"></i>
+          </div>
+          <h4 class="font-bold text-lg mb-1">Volunteers</h4>
+          <p class="text-sm opacity-70 mb-4">Local first responders</p>
+          <div class="w-full h-1 bg-white/20 rounded overflow-hidden"><div class="w-3/4 h-full bg-rose-500"></div></div>
+        </a>
+
       </div>
-    </section>
+    </div>
+  </main>
+
+  <!-- Local Voice Assistant UI -->
+  <div id="assistant" class="fixed bottom-20 md:bottom-8 left-4 md:left-8 z-[100]" aria-hidden="false">
+    <button id="assistantToggle" class="w-14 h-14 rounded-full bg-white/30 dark:bg-slate-800/60 backdrop-blur-xl border border-white/40 flex items-center justify-center text-3xl shadow-[0_8px_32px_0_rgba(31,38,135,0.15)] hover:scale-110 transition-transform" aria-pressed="false" title="Voice assistant">
+      🤖
+    </button>
+    <div id="assistantPanel" class="glass-card mt-4 p-5 w-[85vw] max-w-sm absolute bottom-20 left-0 transition-all duration-300 transform scale-95 opacity-0 pointer-events-none origin-bottom-left" hidden>
+      <div class="flex justify-between items-center mb-3 border-b border-white/20 pb-2">
+        <strong class="font-bold text-lg">SAHAYA Assistant</strong>
+        <button id="assistantClose" class="w-8 h-8 rounded-full glass flex items-center justify-center hover:bg-white/40 transition">✕</button>
+      </div>
+      <div id="assistantStatus" class="text-sm font-semibold opacity-70 mb-3">Tap the mic and speak</div>
+      <div id="assistantTranscript" class="text-sm font-bold mb-3 italic" aria-live="polite"></div>
+      <div id="assistantResponse" class="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-5 bg-white/40 dark:bg-slate-900/40 p-3 rounded-xl border border-white/20"></div>
+      <div class="flex gap-3">
+        <button id="assistantMic" class="flex-1 glass bg-blue-500/20 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-500/40 transition">🎤 Listen</button>
+        <button id="assistantStop" class="flex-1 glass bg-red-500/20 py-2.5 rounded-xl text-sm font-bold hover:bg-red-500/40 transition" hidden>Stop</button>
+      </div>
+    </div>
   </div>
+
+  <!-- Mobile Bottom Nav -->
+  <div class="md:hidden fixed bottom-0 w-full glass border-t border-white/20 dark:border-white/10 z-50 px-6 py-3 flex justify-between items-center pb-safe">
+    <a href="index.html" class="flex flex-col items-center gap-1 text-blue-600 dark:text-blue-400"><i data-lucide="home" class="w-6 h-6"></i><span class="text-[10px] font-bold">Home</span></a>
+    <a href="track.html" class="flex flex-col items-center gap-1 opacity-60 hover:opacity-100 transition"><i data-lucide="map" class="w-6 h-6"></i><span class="text-[10px] font-bold">Track</span></a>
+    <button onclick="sendEmergency()" class="flex flex-col items-center gap-1 -mt-5 relative"><div class="w-12 h-12 rounded-full bg-red-500 flex items-center justify-center text-white shadow-lg shadow-red-500/40 border-4 border-white dark:border-slate-900"><i data-lucide="siren" class="w-6 h-6"></i></div><span class="text-[10px] font-bold text-red-500">SOS</span></button>
+    <a href="driver.html" class="flex flex-col items-center gap-1 opacity-60 hover:opacity-100 transition"><i data-lucide="ambulance" class="w-6 h-6"></i><span class="text-[10px] font-bold">Driver</span></a>
+    <a href="emergency.html" class="flex flex-col items-center gap-1 opacity-60 hover:opacity-100 transition"><i data-lucide="phone-call" class="w-6 h-6"></i><span class="text-[10px] font-bold">Dial</span></a>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed bottom-24 md:bottom-6 right-6 z-[100] flex flex-col gap-3"></div>
+
+  <!-- External JS Links -->
+  <script src="../modern-script.js"></script>
+  <script src="script.js"></script>
+
+  <!-- Original Logic Re-bindings -->
   <script>
+    // --- 1. Service Worker Initialization ---
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js")
+          .then(reg => console.log("Service Worker registered:", reg.scope))
+          .catch(err => console.log("Service Worker registration failed:", err));
+      });
+    }
+
+    // --- 2. Voice Assistant Toggle UI Logic Fixes ---
+    document.getElementById('assistantToggle').addEventListener('click', function() {
+      const panel = document.getElementById('assistantPanel');
+      if (panel.hidden) {
+        panel.hidden = false;
+        // Micro-interaction
+        requestAnimationFrame(() => {
+          panel.classList.remove('scale-95', 'opacity-0', 'pointer-events-none');
+          panel.classList.add('scale-100', 'opacity-100', 'pointer-events-auto');
+        });
+      } else {
+        panel.classList.remove('scale-100', 'opacity-100', 'pointer-events-auto');
+        panel.classList.add('scale-95', 'opacity-0', 'pointer-events-none');
+        setTimeout(() => { panel.hidden = true; }, 300);
+      }
+    });
+    document.getElementById('assistantClose').addEventListener('click', () => {
+      document.getElementById('assistantToggle').click();
+    });
+
+    // --- 3. Child Lock Logic ---
     let isLocked = false;
     let savedPassword = localStorage.getItem("childLockPassword");
-
-    // SET / CHANGE PASSWORD
+    
     document.getElementById("setPasswordBtn").onclick = () => {
       const newPass = prompt("Set Child Lock password (min 4 characters):");
-
       if (newPass && newPass.length >= 4) {
         localStorage.setItem("childLockPassword", newPass);
         savedPassword = newPass;
-        alert("Password saved successfully!");
-      } else {
-        alert("Password must be at least 4 characters.");
+        showToast("Password saved successfully!", "success");
+      } else if (newPass) {
+        showToast("Password must be at least 4 characters.", "warning");
       }
     };
 
-    // CHILD LOCK ON / OFF
     document.getElementById("childLockBtn").onclick = function () {
-
       if (!savedPassword) {
-        alert("Please set a password first!");
+        showToast("Please set a password first!", "warning");
         return;
       }
+      const btnText = this.querySelector('span');
+      const lockIcon = document.getElementById("lockIcon");
 
       if (!isLocked) {
-        // TURN ON (no password needed)
         isLocked = true;
         document.getElementById("emergencyButtons").classList.add("locked");
-        this.innerText = "🔒 Child Lock ON";
+        this.classList.replace("text-green-600", "text-red-500");
+        this.classList.replace("dark:text-green-400", "dark:text-red-400");
+        btnText.innerText = "Locked";
+        lockIcon.setAttribute("data-lucide", "lock");
+        lucide.createIcons();
+        showToast("Child Lock Enabled", "info");
       } else {
-        // TURN OFF (password required)
         const entered = prompt("Enter Child Lock password:");
-
         if (entered === savedPassword) {
           isLocked = false;
           document.getElementById("emergencyButtons").classList.remove("locked");
-          this.innerText = "🔓 Child Lock OFF";
-        } else {
-          alert("Incorrect password!");
+          this.classList.replace("text-red-500", "text-green-600");
+          this.classList.replace("dark:text-red-400", "dark:text-green-400");
+          btnText.innerText = "Unlocked";
+          lockIcon.setAttribute("data-lucide", "unlock");
+          lucide.createIcons();
+          showToast("Child Lock Disabled", "success");
+        } else if (entered !== null) {
+          showToast("Incorrect password!", "error");
         }
       }
     };
-  </script>
-  </script>
-  <script src="script.js"></script>
-  <!-- Local voice assistant UI -->
-  <div id="assistant" class="assistant" aria-hidden="false">
-    <button id="assistantToggle" class="assistant-toggle" aria-pressed="false" title="Voice assistant">
-      🤖
-    </button>
 
-    <div id="assistantPanel" class="assistant-panel" hidden>
-      <div class="assistant-header">
-        <strong>SAHAYA Assistant</strong>
-        <button id="assistantClose" class="assistant-close" aria-label="Close">✕</button>
-      </div>
-      <div id="assistantStatus" class="assistant-status">Tap the mic and speak</div>
-      <div id="assistantTranscript" class="assistant-transcript" aria-live="polite"></div>
-      <div id="assistantResponse" class="assistant-response"></div>
-      <div class="assistant-actions">
-        <button id="assistantMic" class="btn-voice">🎤 Start Listening</button>
-        <button id="assistantStop" class="btn-outline" hidden>Stop</button>
-      </div>
-    </div>
-  </div>
-  <script>
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("sw.js")
-        .then(() => console.log("Service Worker Registered"))
-        .catch(err => console.log("Service Worker Failed:", err));
-    }
+    // Overwrite the script.js callNumber to respect Child Lock locally
+    const originalCallNumber = window.callNumber;
+    window.callNumber = function(number) {
+      if (isLocked) {
+        const enteredPIN = prompt("🔒 Child Lock is ON\nEnter password to continue:");
+        if (enteredPIN !== savedPassword) {
+          showToast("Wrong Password. Call blocked.", "error");
+          return;
+        }
+      }
+      originalCallNumber(number);
+    };
   </script>
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker
-          .register("sw.js")
-          .then(reg => {
-            console.log("Service Worker registered:", reg.scope);
-          })
-          .catch(err => {
-            console.log("Service Worker registration failed:", err);
-          });
-      });
-    }
-  </script>
+
+  <!-- Original Map & WebSocket Logic -->
   <script>
     // WebSocket connection for emergency tracking
     let ws = null;
@@ -362,18 +444,19 @@
           }
 
           if (data.type === "requestAccepted") {
-            document.getElementById("statusText").textContent = "🚑 Ambulance is on the way!";
-            document.getElementById("ambulanceStatus").style.display = "block";
-            document.getElementById("ambulanceStatus").style.background = "#d4edda";
-            document.getElementById("ambulanceInfo").style.display = "block";
+            document.getElementById("statusText").textContent = "Ambulance is on the way!";
+            document.getElementById("ambulanceStatus").classList.remove("hidden", "border-yellow-500", "border-red-500");
+            document.getElementById("ambulanceStatus").classList.add("border-green-500", "bg-green-500/10");
+            document.getElementById("ambulanceInfo").classList.remove("hidden");
+            document.getElementById("ambulanceInfo").classList.add("block");
             if (data.lat && data.lng) updateAmbulanceLocation(data.lat, data.lng);
           }
 
           if (data.type === "requestRejected") {
-            document.getElementById("statusText").textContent = "❌ Request rejected. Trying another driver...";
-            document.getElementById("ambulanceStatus").style.display = "block";
-            document.getElementById("ambulanceStatus").style.background = "#f8d7da";
-            document.getElementById("ambulanceInfo").style.display = "none";
+            document.getElementById("statusText").textContent = "Request rejected. Trying another driver...";
+            document.getElementById("ambulanceStatus").classList.remove("hidden", "border-yellow-500", "border-green-500");
+            document.getElementById("ambulanceStatus").classList.add("border-red-500", "bg-red-500/10");
+            document.getElementById("ambulanceInfo").classList.add("hidden");
           }
         } catch (err) {
           console.error("Error parsing WebSocket message:", err);
@@ -432,7 +515,7 @@
           const route = data.routes[0];
           
           if (route.distance < 50) {
-            document.getElementById("statusText").textContent = "🚑 Ambulance has arrived at your location!";
+            document.getElementById("statusText").textContent = "Ambulance has arrived at your location!";
             document.getElementById("ambDistance").textContent = "Arrived";
             document.getElementById("ambEta").textContent = "0 min";
           } else {
@@ -452,7 +535,7 @@
       if (!mapContainer) return;
 
       // Initialize Leaflet map
-      userMap = L.map("userMap").setView([20.2961, 85.8245], 13);
+      userMap = L.map("userMap", {zoomControl: false}).setView([20.2961, 85.8245], 13);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap'
@@ -533,13 +616,14 @@
       // Ensure tracker is active
       if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'tracker' }));
 
-      document.getElementById("statusText").textContent = "🚨 Emergency sent! Waiting for driver...";
-      document.getElementById("ambulanceStatus").style.display = "block";
-      document.getElementById("ambulanceStatus").style.background = "#fff3cd";
-      document.getElementById("ambulanceInfo").style.display = "none";
+      document.getElementById("statusText").textContent = "Emergency sent! Waiting for driver...";
+      document.getElementById("ambulanceStatus").classList.remove("hidden");
+      document.getElementById("ambulanceInfo").classList.add("hidden");
+      
+      showToast("Emergency signal broadcasted!", "emergency");
       
       // Scroll up to view the map
-      document.getElementById("userMap").scrollIntoView({behavior: "smooth"});
+      document.getElementById("userMap").scrollIntoView({behavior: "smooth", block: "center"});
     }
 
     // Initialize on page load
