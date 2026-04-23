@@ -1,4 +1,5 @@
 const CACHE_NAME = "sahaya-v22";
+const CACHE_NAME = "sahaya-v23";
 const CACHE_FILES = [
   "/",
   "/index.html",
@@ -7,7 +8,9 @@ const CACHE_FILES = [
   "/user.html",
   // NOTE: driver.html intentionally excluded — it requires auth, not suitable for offline cache
   "/style.css",
+  "/modern-style.css",
   "/script.js",
+  "/modern-script.js",
   "/manifest.json",
   // Leaflet CDN files (if you want offline map UI shell)
   "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",

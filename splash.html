@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sahaya</title>
+    <meta name="theme-color" content="#FF7A00">
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #FF7A00 0%, #FF004D 100%);
+        }
+        .logo {
+            width: 128px;
+            height: 128px;
+            animation: scaleIn 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards, 
+                       pulse 2s ease-in-out 1.5s infinite;
+        }
+        @keyframes scaleIn {
+            from { transform: scale(0.5); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+    </style>
+</head>
+<body>
+    <img src="logo.svg" alt="Sahaya Logo" class="logo">
+    <script>
+        // Redirect to the main app after the animation plays
+        setTimeout(() => { window.location.href = 'index.html'; }, 2800);
+    </script>
+</body>
+</html>
