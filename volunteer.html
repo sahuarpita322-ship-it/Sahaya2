@@ -86,6 +86,7 @@
     }
 
     function getWebSocketURL() {
+      if (window.location.protocol === "file:") return "ws://localhost:5500";
       const WS_PROTOCOL = window.location.protocol === "https:" ? "wss:" : "ws:";
       const WS_PORT = window.location.port ? `:${window.location.port}` : "";
       return `${WS_PROTOCOL}//${window.location.hostname}${WS_PORT}`;

@@ -1,4 +1,3 @@
-const CACHE_NAME = "sahaya-v22";
 const CACHE_NAME = "sahaya-v23";
 const CACHE_FILES = [
   "/",

@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sahaya – Emergency Dashboard</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="description"
+    content="Sahaya provides quick access to emergency services, hospitals, blood banks, and government schemes for rural and semi-urban users.">
+
+  <!-- Modern Styles & Icons -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="modern-style.css">
+  
+  <!-- Leaflet Map Integration -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  
+  <style>
+    .custom-ambulance {
+      transition: transform 0.3s linear !important;
+      background: transparent !important;
+      border: none !important;
+    }
+    .animated-route {
+      stroke-dasharray: 10, 10;
+      animation: dash 1s linear infinite;
+    }
+    @keyframes dash {
+      to { stroke-dashoffset: -20; }
+    }
+    /* Child Lock Hidden State */
+    .locked {
+      opacity: 0.5;
+      pointer-events: none;
+      filter: grayscale(100%);
+    }
+    /* Ensure map stays behind navbars */
+    .leaflet-container {
+      z-index: 1 !important;
+    }
+  </style>
+</head>
+
+<body class="relative min-h-screen text-slate-800 dark:text-slate-100 overflow-x-hidden transition-colors duration-500 font-sans pb-20 md:pb-0" data-page="home">
+  
+  <!-- Animated Mesh Background & Particles -->
+  <div class="mesh-bg"></div>
+  <div id="particles" class="fixed inset-0 z-[-1] pointer-events-none overflow-hidden"></div>
+
+  <!-- Top Navbar -->
+  <nav class="fixed top-0 w-full z-50 glass-nav border-b border-white/20 dark:border-white/10 transition-all duration-300" id="navbar">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <!-- Logo -->
+      <div class="flex items-center gap-3 cursor-pointer group" onclick="window.scrollTo(0,0)">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform">
+          <i data-lucide="shield-plus"></i>
+        </div>
+        <span class="text-xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 tracking-tight">
+          Sahaya
+        </span>
+      </div>
+
+      <!-- Desktop Menu -->
+      <div class="hidden md:flex items-center gap-6 text-sm font-medium">
+        <a href="index.html" class="text-blue-600 dark:text-blue-400 font-bold transition">Home</a>
+        <a href="hospital.html" class="hover:text-blue-600 dark:hover:text-blue-400 transition">Hospitals</a>
+        <a href="blood.html" class="hover:text-blue-600 dark:hover:text-blue-400 transition">Blood</a>
+        <a href="schemes.html" class="hover:text-blue-600 dark:hover:text-blue-400 transition">Schemes</a>
+        <a href="driver.html" class="px-4 py-2 rounded-full bg-white/20 dark:bg-slate-800/40 hover:bg-white/30 border border-white/30 transition shadow-sm">Driver Panel</a>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center gap-4">
+        <!-- Live Location Toggle -->
+        <div class="hidden sm:flex items-center gap-2" title="Broadcast Location">
+          <span class="text-xs font-semibold opacity-70">Live</span>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" class="sr-only peer" id="live-toggle">
+            <div class="w-9 h-5 bg-slate-300/50 peer-focus:outline-none rounded-full peer dark:bg-slate-700/50 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500 shadow-inner"></div>
+          </label>
+        </div>
+        <!-- Dark Mode Toggle -->
+        <button id="theme-toggle" class="p-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 transition ripple" aria-label="Toggle Dark Mode">
+          <i data-lucide="moon" class="w-5 h-5 dark:hidden"></i>
+          <i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12 animate-fade-in-up" role="main">
+    
+    <!-- Hero Section -->
+    <div class="flex flex-col lg:flex-row items-center gap-12 py-10">
+      
+      <!-- Left Text & Actions -->
+      <div class="flex-1 space-y-6 z-10">
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass text-xs font-bold text-blue-600 dark:text-blue-400">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+          </span>
+          Live Location Integrated
+        </div>
+        
+        <h1 class="text-5xl md:text-6xl font-extrabold leading-tight">
+          Smart <span class="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500">Emergency Help</span><br>at your fingertips.
+        </h1>
+        
+        <p class="text-lg opacity-80 max-w-xl">
+          Quickly reach ambulance, police, or fire services and find nearby hospitals, blood banks, and government schemes — with live driver tracking and instant notifications.
+        </p>
+
+        <div class="flex flex-wrap gap-4 pt-4">
+          <button type="button" class="ripple px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 text-white font-bold shadow-[0_8px_20px_rgba(225,29,72,0.4)] hover:shadow-[0_12px_25px_rgba(225,29,72,0.6)] hover:-translate-y-1 transition-all flex items-center gap-2" id="sendEmergencyBtn" onclick="sendEmergency()">
+            <i data-lucide="siren" class="w-5 h-5"></i> Send SOS Alert
+          </button>
+          <button type="button" class="ripple glass-button px-6 py-3 rounded-xl hover:bg-white/20 transition-all font-semibold flex items-center gap-2 text-slate-800 dark:text-slate-100" onclick="callNumber('112')">
+            <i data-lucide="phone-call" class="w-5 h-5 text-red-500"></i> Call 112
+          </button>
+        </div>
+
+        <div class="mt-4 grid gap-4 sm:grid-cols-2">
+          <div id="ambulanceStatus" class="hidden glass p-4 rounded-2xl border-l-4 border-yellow-500 transition-all duration-500 shadow-sm">
+            <div class="flex items-center gap-3 mb-2">
+              <i data-lucide="info" class="w-5 h-5 text-yellow-600 dark:text-yellow-400 animate-pulse"></i>
+              <p id="statusText" class="font-bold text-sm">Waiting for driver...</p>
+            </div>
+            <p id="ambulanceInfo" class="text-xs font-semibold text-blue-600 dark:text-blue-400 hidden ml-8">
+              🚗 Distance: <span id="ambDistance">-</span> | ⏳ ETA: <span id="ambEta">-</span>
+            </p>
+          </div>
+          <div class="glass p-4 rounded-2xl border border-white/20 bg-white/15 dark:bg-slate-900/40 shadow-sm hidden sm:block">
+            <p class="text-xs uppercase tracking-[0.25em] opacity-70 mb-2">Local rescue network</p>
+            <p class="font-bold text-lg">24/7 coordination</p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-4 mt-2">
+          <div class="flex bg-white/20 dark:bg-slate-800/40 rounded-full p-1 border border-white/20 shadow-sm" role="group" aria-label="Choose language">
+            <button type="button" onclick="setLanguage('en')" class="px-4 py-1 text-xs font-bold rounded-full hover:bg-white/40 transition">English</button>
+            <button type="button" onclick="setLanguage('hi')" class="px-4 py-1 text-xs font-bold rounded-full hover:bg-white/40 transition">हिन्दी</button>
+            <button type="button" onclick="setLanguage('or')" class="px-4 py-1 text-xs font-bold rounded-full hover:bg-white/40 transition">ଓଡିଆ</button>
+          </div>
+          <button id="voiceBtn" type="button" class="glass-button px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 hover:bg-white/30 transition shadow-sm">
+            <i data-lucide="volume-2" class="w-4 h-4"></i> Instructions
+          </button>
+        </div>
+      </div>
+
+      <!-- Right Live Map -->
+      <div class="flex-1 w-full z-10 animate-fade-in-up relative">
+        <div class="glass-card p-3 w-full border-white/30 shadow-[0_8px_32px_0_rgba(31,38,135,0.15)] relative group overflow-hidden">
+          <div class="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-purple-400/10 pointer-events-none"></div>
+          <div class="flex justify-between items-center px-2 pb-2 relative">
+            <p class="text-sm font-bold opacity-80 flex items-center gap-2"><i data-lucide="map-pin" class="w-4 h-4 text-red-500"></i> Live Dispatch Map</p>
+            <button onclick="copyLocation()" class="glass-button text-xs font-semibold px-3 py-1 rounded-full hover:bg-white/40 transition">Share</button>
+          </div>
+          <!-- Leaflet Map Container -->
+          <div id="userMap" class="w-full h-[300px] md:h-[400px] rounded-xl overflow-hidden relative z-0"></div>
+        </div>
+
+        <div class="glass-card absolute -top-8 right-0 hidden xl:flex flex-col gap-3 p-4 w-[240px] border-white/20 shadow-xl float-animation">
+          <div class="text-xs uppercase tracking-[0.28em] opacity-70">Driver status</div>
+          <div class="flex items-center gap-3">
+            <span class="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-600 flex items-center justify-center"><i data-lucide="user-check" class="w-5 h-5"></i></span>
+            <div>
+              <p class="font-bold">Driver found</p>
+              <p class="text-sm opacity-70">Nearby responder en route</p>
+            </div>
+          </div>
+          <div class="flex items-center justify-between text-sm opacity-80">
+            <span>ETA</span>
+            <span class="font-bold">4 mins</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Immediate Help Row & Controls -->
+    <div class="mt-4 mb-10 flex flex-col md:flex-row justify-between items-center gap-4">
+      <div class="flex items-center gap-3">
+        <h2 class="text-sm font-bold uppercase tracking-widest opacity-60 ml-2">Quick Dial Help</h2>
+        <!-- Security Child Lock -->
+        <div class="glass px-3 py-1 rounded-full flex items-center gap-2">
+          <button id="setPasswordBtn" class="text-xs font-semibold hover:text-blue-500 transition border-r border-white/20 pr-2">Set PIN</button>
+          <button id="childLockBtn" class="text-xs font-semibold text-green-600 dark:text-green-400 flex items-center gap-1 hover:opacity-70 transition">
+            <i data-lucide="unlock" id="lockIcon" class="w-3 h-3"></i> <span>Unlocked</span>
+          </button>
+        </div>
+      </div>
+      <button class="text-xs font-bold glass px-4 py-2 rounded-full text-blue-600 dark:text-blue-400 hover:bg-white/30 transition" onclick="showFirstAidTip()">
+        🩺 Random First-Aid Tip
+      </button>
+    </div>
+    <div id="firstAidTip" class="text-sm font-medium mb-6 px-4 border-l-2 border-blue-500 text-slate-600 dark:text-slate-300">Need help? Tap "Random First-Aid Tip".</div>
+
+    <!-- Emergency Quick Actions -->
+    <div id="emergencyButtons" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 transition-all duration-300">
+      <!-- Ambulance -->
+      <button class="glass-button glass-card group p-6 text-left overflow-hidden bg-gradient-to-br hover:from-red-500/10 hover:to-rose-600/10 border-red-500/20" onclick="callNumber('108')">
+        <div class="absolute -right-6 -top-6 w-24 h-24 bg-red-500/20 rounded-full blur-xl group-hover:scale-150 transition-transform"></div>
+        <div class="w-12 h-12 rounded-xl bg-red-500/20 text-red-600 dark:text-red-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+          <i data-lucide="ambulance"></i>
+        </div>
+        <h3 class="text-xl font-bold mb-1">Call Ambulance</h3>
+        <p class="text-sm opacity-70 font-semibold">Dial 108</p>
+      </button>
+      
+      <!-- Police -->
+      <button class="glass-button glass-card group p-6 text-left bg-gradient-to-br hover:from-blue-500/10 hover:to-indigo-600/10 border-blue-500/20" onclick="callNumber('100')">
+        <div class="absolute -right-6 -top-6 w-24 h-24 bg-blue-500/20 rounded-full blur-xl group-hover:scale-150 transition-transform"></div>
+        <div class="w-12 h-12 rounded-xl bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+          <i data-lucide="shield-alert"></i>
+        </div>
+        <h3 class="text-xl font-bold mb-1">Call Police</h3>
+        <p class="text-sm opacity-70 font-semibold">Dial 100</p>
+      </button>
+
+      <!-- Fire -->
+      <button class="glass-button glass-card group p-6 text-left bg-gradient-to-br hover:from-orange-500/10 hover:to-amber-600/10 border-orange-500/20" onclick="callNumber('101')">
+        <div class="absolute -right-6 -top-6 w-24 h-24 bg-orange-500/20 rounded-full blur-xl group-hover:scale-150 transition-transform"></div>
+        <div class="w-12 h-12 rounded-xl bg-orange-500/20 text-orange-600 dark:text-orange-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+          <i data-lucide="flame"></i>
+        </div>
+        <h3 class="text-xl font-bold mb-1">Fire Brigade</h3>
+        <p class="text-sm opacity-70 font-semibold">Dial 101</p>
+      </button>
+    </div>
+
+    <!-- Emergency Numbers Section -->
+    <div class="mb-12">
+      <h2 class="text-sm font-bold uppercase tracking-widest opacity-60 mb-6 ml-2">Emergency Hotline Numbers</h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <!-- 108 Ambulance -->
+        <a href="user.html" target="_blank" class="glass-card p-5 text-center group hover:border-red-500/50 transition border-red-500/20 block cursor-pointer">
+          <div class="text-4xl font-extrabold text-red-600 dark:text-red-400 mb-2">108</div>
+          <p class="text-sm font-bold opacity-80">Ambulance Service</p>
+          <p class="text-xs opacity-60 mt-2">24/7 Emergency</p>
+          <div class="mt-3 w-full glass py-2 rounded-lg text-xs font-bold group-hover:bg-white/30 transition">Open</div>
+        </a>
+
+        <!-- 100 Police -->
+        <a href="user.html" target="_blank" class="glass-card p-5 text-center group hover:border-blue-500/50 transition border-blue-500/20 block cursor-pointer">
+          <div class="text-4xl font-extrabold text-blue-600 dark:text-blue-400 mb-2">100</div>
+          <p class="text-sm font-bold opacity-80">Police Emergency</p>
+          <p class="text-xs opacity-60 mt-2">24/7 Available</p>
+          <div class="mt-3 w-full glass py-2 rounded-lg text-xs font-bold group-hover:bg-white/30 transition">Open</div>
+        </a>
+
+        <!-- 101 Fire -->
+        <a href="user.html" target="_blank" class="glass-card p-5 text-center group hover:border-orange-500/50 transition border-orange-500/20 block cursor-pointer">
+          <div class="text-4xl font-extrabold text-orange-600 dark:text-orange-400 mb-2">101</div>
+          <p class="text-sm font-bold opacity-80">Fire Brigade</p>
+          <p class="text-xs opacity-60 mt-2">Fire & Rescue</p>
+          <div class="mt-3 w-full glass py-2 rounded-lg text-xs font-bold group-hover:bg-white/30 transition">Open</div>
+        </a>
+
+        <!-- 112 General -->
+        <a href="user.html" target="_blank" class="glass-card p-5 text-center group hover:border-purple-500/50 transition border-purple-500/20 block cursor-pointer">
+          <div class="text-4xl font-extrabold text-purple-600 dark:text-purple-400 mb-2">112</div>
+          <p class="text-sm font-bold opacity-80">General Emergency</p>
+          <p class="text-xs opacity-60 mt-2">All Services</p>
+          <div class="mt-3 w-full glass py-2 rounded-lg text-xs font-bold group-hover:bg-white/30 transition">Open</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- Ambulance Request & Driver Status Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+      <!-- Request Ambulance -->
+      <div class="glass-card p-8 border-red-500/20 bg-gradient-to-br from-red-500/5 to-rose-600/5">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-12 h-12 rounded-xl bg-red-500/20 text-red-600 dark:text-red-400 flex items-center justify-center">
+            <i data-lucide="siren" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-2xl font-bold">Request Ambulance</h3>
+        </div>
+        <p class="text-sm opacity-75 mb-6">Send an ambulance request to nearby registered drivers. They will respond to your emergency location.</p>
+        <div class="space-y-3 mb-6">
+          <div class="flex items-center gap-3 text-sm">
+            <span class="w-5 h-5 rounded-full bg-green-500/30 flex items-center justify-center"><i data-lucide="check" class="w-3 h-3 text-green-600"></i></span>
+            <span>Real-time driver tracking</span>
+          </div>
+          <div class="flex items-center gap-3 text-sm">
+            <span class="w-5 h-5 rounded-full bg-green-500/30 flex items-center justify-center"><i data-lucide="check" class="w-3 h-3 text-green-600"></i></span>
+            <span>Live ETA updates</span>
+          </div>
+          <div class="flex items-center gap-3 text-sm">
+            <span class="w-5 h-5 rounded-full bg-green-500/30 flex items-center justify-center"><i data-lucide="check" class="w-3 h-3 text-green-600"></i></span>
+            <span>Backup driver selection</span>
+          </div>
+        </div>
+        <a href="user.html" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 text-white font-bold shadow-lg shadow-red-500/30 hover:shadow-red-500/50 hover:-translate-y-1 transition-all flex items-center justify-center gap-2 text-center">
+          <i data-lucide="send" class="w-5 h-5"></i> Request Ambulance
+        </a>
+        <p class="text-xs opacity-60 mt-4 text-center">Or dial 108 for direct ambulance service</p>
+      </div>
+
+      <!-- Driver Status & Information -->
+      <div class="glass-card p-8 border-green-500/20 bg-gradient-to-br from-green-500/5 to-emerald-600/5">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-12 h-12 rounded-xl bg-green-500/20 text-green-600 dark:text-green-400 flex items-center justify-center">
+            <i data-lucide="users" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-2xl font-bold">Available Drivers</h3>
+        </div>
+        <div id="driverStatus" class="space-y-4">
+          <div class="flex items-center justify-between p-4 rounded-xl bg-white/20 dark:bg-slate-800/40 border border-green-500/20">
+            <div>
+              <p class="font-bold text-green-600 dark:text-green-400 flex items-center gap-2">
+                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Drivers Available
+              </p>
+              <p class="text-sm opacity-70 mt-1">Nearby ambulances ready to respond</p>
+            </div>
+            <div class="text-center">
+              <p class="text-3xl font-bold" id="availableDriverCount">-</p>
+              <p class="text-xs opacity-60">active</p>
+            </div>
+          </div>
+          
+          <div class="space-y-3 max-h-48 overflow-y-auto">
+            <div id="driversList" class="text-sm opacity-70">
+              <p class="text-center py-4">Loading driver information...</p>
+            </div>
+          </div>
+
+          <a href="driver.html" class="block w-full py-3 px-4 rounded-xl border border-green-500/30 text-center font-bold hover:bg-green-500/10 transition text-green-600 dark:text-green-400 flex items-center justify-center gap-2">
+            <i data-lucide="arrow-right" class="w-4 h-4"></i> Go to Driver Panel
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard Features -->
+    <div class="mb-12">
+      <h2 class="text-sm font-bold uppercase tracking-widest opacity-60 mb-6 ml-2">Services & Features</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        
+        <a href="share.html" class="glass-card p-6 group block text-left">
+          <div class="w-10 h-10 rounded-lg bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-4 group-hover:scale-110 transition">
+            <i data-lucide="share-2"></i>
+          </div>
+          <h4 class="font-bold text-lg mb-1">Share Location</h4>
+          <p class="text-sm opacity-70 mb-4">Send link to contacts</p>
+          <div class="w-full h-1 bg-white/20 rounded overflow-hidden"><div class="w-1/3 h-full bg-indigo-500"></div></div>
+        </a>
+
+        <a href="track.html" class="glass-card p-6 group block text-left">
+          <div class="w-10 h-10 rounded-lg bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 flex items-center justify-center mb-4 group-hover:scale-110 transition">
+            <i data-lucide="map"></i>
+          </div>
+          <h4 class="font-bold text-lg mb-1">Track Live</h4>
+          <p class="text-sm opacity-70 mb-4">Monitor active routes</p>
+          <div class="w-full h-1 bg-white/20 rounded overflow-hidden"><div class="w-2/3 h-full bg-cyan-500"></div></div>
+        </a>
+
+        <a href="hospital.html" class="glass-card p-6 group block text-left">
+          <div class="w-10 h-10 rounded-lg bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-4 group-hover:scale-110 transition">
+            <i data-lucide="building-2"></i>
+          </div>
+          <h4 class="font-bold text-lg mb-1">Hospitals</h4>
+          <p class="text-sm opacity-70 mb-4">Nearby care centers</p>
+          <div class="w-full h-1 bg-white/20 rounded overflow-hidden"><div class="w-1/2 h-full bg-emerald-500"></div></div>
+        </a>
+
+        <a href="volunteer.html" class="glass-card p-6 group block text-left">
+          <div class="w-10 h-10 rounded-lg bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-4 group-hover:scale-110 transition">
+            <i data-lucide="users"></i>
+          </div>
+          <h4 class="font-bold text-lg mb-1">Volunteers</h4>
+          <p class="text-sm opacity-70 mb-4">Local first responders</p>
+          <div class="w-full h-1 bg-white/20 rounded overflow-hidden"><div class="w-3/4 h-full bg-rose-500"></div></div>
+        </a>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Local Voice Assistant UI -->
+  <div id="assistant" class="fixed bottom-20 md:bottom-8 left-4 md:left-8 z-[100]" aria-hidden="false">
+    <button id="assistantToggle" class="w-14 h-14 rounded-full bg-white/30 dark:bg-slate-800/60 backdrop-blur-xl border border-white/40 flex items-center justify-center text-3xl shadow-[0_8px_32px_0_rgba(31,38,135,0.15)] hover:scale-110 transition-transform" aria-pressed="false" title="Voice assistant">
+      🤖
+    </button>
+    <div id="assistantPanel" class="glass-card mt-4 p-5 w-[85vw] max-w-sm absolute bottom-20 left-0 transition-all duration-300 transform scale-95 opacity-0 pointer-events-none origin-bottom-left" hidden>
+      <div class="flex justify-between items-center mb-3 border-b border-white/20 pb-2">
+        <strong class="font-bold text-lg">SAHAYA Assistant</strong>
+        <button id="assistantClose" class="w-8 h-8 rounded-full glass flex items-center justify-center hover:bg-white/40 transition">✕</button>
+      </div>
+      <div id="assistantStatus" class="text-sm font-semibold opacity-70 mb-3">Tap the mic and speak</div>
+      <div id="assistantTranscript" class="text-sm font-bold mb-3 italic" aria-live="polite"></div>
+      <div id="assistantResponse" class="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-5 bg-white/40 dark:bg-slate-900/40 p-3 rounded-xl border border-white/20"></div>
+      <div class="flex gap-3">
+        <button id="assistantMic" class="flex-1 glass bg-blue-500/20 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-500/40 transition">🎤 Listen</button>
+        <button id="assistantStop" class="flex-1 glass bg-red-500/20 py-2.5 rounded-xl text-sm font-bold hover:bg-red-500/40 transition" hidden>Stop</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Bottom Nav -->
+  <div class="md:hidden fixed bottom-0 w-full glass border-t border-white/20 dark:border-white/10 z-50 px-6 py-3 flex justify-between items-center pb-safe">
+    <a href="index.html" class="flex flex-col items-center gap-1 text-blue-600 dark:text-blue-400"><i data-lucide="home" class="w-6 h-6"></i><span class="text-[10px] font-bold">Home</span></a>
+    <a href="track.html" class="flex flex-col items-center gap-1 opacity-60 hover:opacity-100 transition"><i data-lucide="map" class="w-6 h-6"></i><span class="text-[10px] font-bold">Track</span></a>
+    <button onclick="sendEmergency()" class="flex flex-col items-center gap-1 -mt-5 relative"><div class="w-12 h-12 rounded-full bg-red-500 flex items-center justify-center text-white shadow-lg shadow-red-500/40 border-4 border-white dark:border-slate-900"><i data-lucide="siren" class="w-6 h-6"></i></div><span class="text-[10px] font-bold text-red-500">SOS</span></button>
+    <a href="driver.html" class="flex flex-col items-center gap-1 opacity-60 hover:opacity-100 transition"><i data-lucide="ambulance" class="w-6 h-6"></i><span class="text-[10px] font-bold">Driver</span></a>
+    <a href="emergency.html" class="flex flex-col items-center gap-1 opacity-60 hover:opacity-100 transition"><i data-lucide="phone-call" class="w-6 h-6"></i><span class="text-[10px] font-bold">Dial</span></a>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed bottom-24 md:bottom-6 right-6 z-[100] flex flex-col gap-3"></div>
+
+  <!-- External JS Links -->
+  <script src="modern-script.js"></script>
+  <script src="script.js"></script>
+
+  <!-- Original Logic Re-bindings -->
+  <script>
+    // --- 1. Service Worker Initialization ---
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js")
+          .then(reg => console.log("Service Worker registered:", reg.scope))
+          .catch(err => console.log("Service Worker registration failed:", err));
+      });
+    }
+
+    // --- 2. Voice Assistant Toggle UI Logic Fixes ---
+    document.getElementById('assistantToggle').addEventListener('click', function() {
+      const panel = document.getElementById('assistantPanel');
+      if (panel.hidden) {
+        panel.hidden = false;
+        // Micro-interaction
+        requestAnimationFrame(() => {
+          panel.classList.remove('scale-95', 'opacity-0', 'pointer-events-none');
+          panel.classList.add('scale-100', 'opacity-100', 'pointer-events-auto');
+        });
+      } else {
+        panel.classList.remove('scale-100', 'opacity-100', 'pointer-events-auto');
+        panel.classList.add('scale-95', 'opacity-0', 'pointer-events-none');
+        setTimeout(() => { panel.hidden = true; }, 300);
+      }
+    });
+    document.getElementById('assistantClose').addEventListener('click', () => {
+      document.getElementById('assistantToggle').click();
+    });
+
+    // --- 3. Child Lock Logic ---
+    let isLocked = false;
+    let savedPassword = localStorage.getItem("childLockPassword");
+    
+    document.getElementById("setPasswordBtn").onclick = () => {
+      const newPass = prompt("Set Child Lock password (min 4 characters):");
+      if (newPass && newPass.length >= 4) {
+        localStorage.setItem("childLockPassword", newPass);
+        savedPassword = newPass;
+        showToast("Password saved successfully!", "success");
+      } else if (newPass) {
+        showToast("Password must be at least 4 characters.", "warning");
+      }
+    };
+
+    document.getElementById("childLockBtn").onclick = function () {
+      if (!savedPassword) {
+        showToast("Please set a password first!", "warning");
+        return;
+      }
+      const btnText = this.querySelector('span');
+      const lockIcon = document.getElementById("lockIcon");
+
+      if (!isLocked) {
+        isLocked = true;
+        document.getElementById("emergencyButtons").classList.add("locked");
+        this.classList.replace("text-green-600", "text-red-500");
+        this.classList.replace("dark:text-green-400", "dark:text-red-400");
+        btnText.innerText = "Locked";
+        lockIcon.setAttribute("data-lucide", "lock");
+        lucide.createIcons();
+        showToast("Child Lock Enabled", "info");
+      } else {
+        const entered = prompt("Enter Child Lock password:");
+        if (entered === savedPassword) {
+          isLocked = false;
+          document.getElementById("emergencyButtons").classList.remove("locked");
+          this.classList.replace("text-red-500", "text-green-600");
+          this.classList.replace("dark:text-red-400", "dark:text-green-400");
+          btnText.innerText = "Unlocked";
+          lockIcon.setAttribute("data-lucide", "unlock");
+          lucide.createIcons();
+          showToast("Child Lock Disabled", "success");
+        } else if (entered !== null) {
+          showToast("Incorrect password!", "error");
+        }
+      }
+    };
+
+    // Overwrite the script.js callNumber to respect Child Lock locally
+    const originalCallNumber = window.callNumber;
+    window.callNumber = function(number) {
+      if (isLocked) {
+        const enteredPIN = prompt("🔒 Child Lock is ON\nEnter password to continue:");
+        if (enteredPIN !== savedPassword) {
+          showToast("Wrong Password. Call blocked.", "error");
+          return;
+        }
+      }
+      originalCallNumber(number);
+    };
+  </script>
+
+  <!-- Original Map & WebSocket Logic -->
+  <script>
+    // WebSocket connection for emergency tracking
+    let ws = null;
+    let userMap = null;
+    let userMarker = null;
+    let ambulanceMarker = null;
+    let userLocation = null;
+    let routeLayer = null;
+    let lastRouteCalcTime = 0;
+    let myUserId = "user_" + Math.floor(Math.random() * 100000);
+
+    function getWebSocketURL() {
+      if (window.location.protocol === "file:") return "ws://localhost:5500";
+      const WS_PROTOCOL = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const WS_PORT = window.location.port ? `:${window.location.port}` : "";
+      return `${WS_PROTOCOL}//${window.location.hostname}${WS_PORT}`;
+    }
+
+    // Initialize WebSocket connection
+    function initWebSocket() {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        return; // Already connected
+      }
+
+      ws = new WebSocket(getWebSocketURL());
+
+      ws.onopen = function () {
+        console.log("WebSocket connected (Tracker Active)");
+        ws.send(JSON.stringify({ type: 'tracker' }));
+      };
+
+      ws.onmessage = function (event) {
+        try {
+          const data = JSON.parse(event.data);
+
+          // Track available drivers
+          if (data.type === "allUsers" && Array.isArray(data.users)) {
+            updateDriverStatus(data.users);
+          }
+
+          // Handle driver status updates
+          if (data.type === "driverOnline") {
+            console.log("[HOME] Driver online:", data.driverId);
+            updateDriverCount();
+          }
+
+          if (data.type === "driverOffline") {
+            console.log("[HOME] Driver offline:", data.driverId);
+            updateDriverCount();
+          }
+
+          // Only listen to 'driverLocation' to avoid snapping the ambulance to the user's own location updates
+          if (data.type === "driverLocation") {
+            console.log('[HOME] 🚑 Ambulance moving to:', data.lat, data.lng);
+            updateAmbulanceLocation(data.lat, data.lng);
+          }
+
+          if (data.type === "requestAccepted") {
+            document.getElementById("statusText").textContent = "Ambulance is on the way!";
+            document.getElementById("ambulanceStatus").classList.remove("hidden", "border-yellow-500", "border-red-500");
+            document.getElementById("ambulanceStatus").classList.add("border-green-500", "bg-green-500/10");
+            document.getElementById("ambulanceInfo").classList.remove("hidden");
+            document.getElementById("ambulanceInfo").classList.add("block");
+            if (data.lat && data.lng) updateAmbulanceLocation(data.lat, data.lng);
+          }
+
+          if (data.type === "requestRejected") {
+            document.getElementById("statusText").textContent = "Request rejected. Trying another driver...";
+            document.getElementById("ambulanceStatus").classList.remove("hidden", "border-yellow-500", "border-green-500");
+            document.getElementById("ambulanceStatus").classList.add("border-red-500", "bg-red-500/10");
+            document.getElementById("ambulanceInfo").classList.add("hidden");
+          }
+        } catch (err) {
+          console.error("Error parsing WebSocket message:", err);
+        }
+      };
+
+      ws.onerror = function (error) {
+        console.error("WebSocket error:", error);
+      };
+
+      ws.onclose = function () {
+        console.log("WebSocket closed. Reconnecting...");
+        setTimeout(initWebSocket, 3000); // Reconnect after 3 seconds
+      };
+    }
+
+    // Update ambulance location and calculate route
+    function updateAmbulanceLocation(lat, lng) {
+      if (!userMap) return;
+      
+      if (ambulanceMarker) {
+        // Native CSS transition makes this buttery smooth now
+        ambulanceMarker.setLatLng([lat, lng]);
+      } else {
+        ambulanceMarker = L.marker([lat, lng], {
+          icon: L.divIcon({
+            className: 'custom-ambulance',
+            html: `<div style="font-size: 32px; background: white; border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">🚑</div>`,
+            iconSize: [40, 40],
+            iconAnchor: [20, 20],
+            popupAnchor: [0, -20]
+          }),
+          zIndexOffset: 1000
+        }).addTo(userMap).bindPopup("🚑 Ambulance Location").openPopup();
+      }
+
+      // Auto-fit bounds to show both user and ambulance
+      if (userLocation && userMarker) {
+        const now = Date.now();
+        if (now - lastRouteCalcTime > 3000) {
+          lastRouteCalcTime = now;
+          const group = new L.featureGroup([userMarker, ambulanceMarker]);
+          userMap.fitBounds(group.getBounds().pad(0.1));
+          calculateRouteToUser(lat, lng);
+        }
+      }
+    }
+
+    // OSRM Public API to fetch routing, distance and ETA
+    function calculateRouteToUser(driverLat, driverLng) {
+      if (!userLocation) return;
+      const url = `https://router.project-osrm.org/route/v1/driving/${driverLng},${driverLat};${userLocation.lng},${userLocation.lat}?overview=full&geometries=geojson`;
+
+      fetch(url).then(res => res.json()).then(data => {
+        if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+          const route = data.routes[0];
+          
+          if (route.distance < 50) {
+            document.getElementById("statusText").textContent = "Ambulance has arrived at your location!";
+            document.getElementById("ambDistance").textContent = "Arrived";
+            document.getElementById("ambEta").textContent = "0 min";
+          } else {
+            document.getElementById("ambDistance").textContent = (route.distance / 1000).toFixed(2) + " km";
+            document.getElementById("ambEta").textContent = Math.round(route.duration / 60) + " min";
+          }
+          
+          if (routeLayer) userMap.removeLayer(routeLayer);
+          routeLayer = L.geoJSON(route.geometry, { style: { color: '#3b82f6', weight: 5, opacity: 0.9, dashArray: '10, 10', className: 'animated-route' } }).addTo(userMap);
+        }
+      }).catch(err => console.log("Route calculation error:", err));
+    }
+
+    // Initialize map
+    function initMap() {
+      const mapContainer = document.getElementById("userMap");
+      if (!mapContainer) return;
+
+      // Initialize Leaflet map
+      userMap = L.map("userMap", {zoomControl: false}).setView([20.2961, 85.8245], 13);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+      }).addTo(userMap);
+
+      // Get user location
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          function (position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            userLocation = { lat, lng };
+
+            userMap.setView([lat, lng], 15);
+            userMarker = L.marker([lat, lng]).addTo(userMap)
+              .bindPopup("📍 Your Location")
+              .openPopup();
+          },
+          function (error) {
+            console.error("Geolocation error:", error);
+            alert("Please enable location access to use emergency tracking");
+          }
+        );
+      }
+    }
+
+    // Send emergency request
+    function sendEmergency() {
+      if (!userLocation) {
+        // Try to get location first
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            function (position) {
+              userLocation = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+              };
+              sendEmergencyRequest();
+            },
+            function (error) {
+              alert("Please enable location access to send emergency request");
+            }
+          );
+        } else {
+          alert("Geolocation is not supported by your browser");
+        }
+        return;
+      }
+
+      sendEmergencyRequest();
+    }
+
+    function sendEmergencyRequest() {
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        alert("Connecting to server... Please try again in a moment.");
+        initWebSocket();
+        return;
+      }
+
+      // First, register as an active user to get live driver locations
+      ws.send(JSON.stringify({
+        type: "location",
+        userId: myUserId,
+        lat: userLocation.lat,
+        lng: userLocation.lng
+      }));
+
+      const message = {
+        type: "emergency",
+        userId: myUserId,
+        lat: userLocation.lat,
+        lng: userLocation.lng
+      };
+
+      ws.send(JSON.stringify(message));
+      console.log("Emergency sent:", message);
+      
+      // Ensure tracker is active
+      if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'tracker' }));
+
+      document.getElementById("statusText").textContent = "Request has been sent to nearby drivers...";
+      document.getElementById("ambulanceStatus").classList.remove("hidden", "border-yellow-500", "border-red-500");
+      document.getElementById("ambulanceStatus").classList.add("border-green-500", "bg-green-500/10");
+      document.getElementById("ambulanceInfo").classList.add("hidden");
+      
+      
+      // Scroll up to view the map
+      document.getElementById("userMap").scrollIntoView({behavior: "smooth", block: "center"});
+    }
+
+    // Update driver status and available drivers count
+    let activeDrivers = [];
+    
+    function updateDriverStatus(drivers) {
+      activeDrivers = drivers || [];
+      updateDriverCount();
+      updateDriversList();
+    }
+
+    function updateDriverCount() {
+      const count = activeDrivers.length || 0;
+      const countElement = document.getElementById("availableDriverCount");
+      if (countElement) {
+        countElement.textContent = count;
+      }
+    }
+
+    function updateDriversList() {
+      const driversList = document.getElementById("driversList");
+      if (!driversList) return;
+
+      if (!activeDrivers || activeDrivers.length === 0) {
+        driversList.innerHTML = `
+          <div class="text-center py-4 opacity-60">
+            <p class="text-sm font-medium">No drivers available at the moment</p>
+            <p class="text-xs mt-1">Try calling 108 for emergency ambulance</p>
+          </div>
+        `;
+        return;
+      }
+
+      const drivers = activeDrivers.slice(0, 3); // Show top 3 drivers
+      driversList.innerHTML = drivers.map((driver, idx) => `
+        <div class="p-3 rounded-lg bg-white/10 dark:bg-slate-800/40 border border-green-500/20">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-8 h-8 rounded-full bg-green-500/30 flex items-center justify-center text-sm font-bold">
+                ${String.fromCharCode(65 + idx)}
+              </span>
+              <div>
+                <p class="font-bold text-sm">${driver.userId ? driver.userId.substring(0, 20) : 'Ambulance ' + (idx + 1)}</p>
+                <p class="text-xs opacity-60">Ready to assist</p>
+              </div>
+            </div>
+            <span class="text-xs bg-green-500/30 text-green-700 dark:text-green-300 px-2 py-1 rounded-full font-bold">Online</span>
+          </div>
+        </div>
+      `).join('');
+
+      if (activeDrivers.length > 3) {
+        driversList.innerHTML += `
+          <div class="text-center py-2 text-xs opacity-60">
+            +${activeDrivers.length - 3} more drivers available
+          </div>
+        `;
+      }
+    }
+
+    // Initialize on page load
+    window.addEventListener("DOMContentLoaded", function () {
+      initMap();
+      initWebSocket();
+      // Set initial driver count
+      updateDriverCount();
+    });
+  </script>
+</body>
+
+</html>
+</body>
+</html>

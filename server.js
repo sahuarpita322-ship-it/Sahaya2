@@ -30,7 +30,9 @@ app.use(express.static(path.join(__dirname)));
 // ── REST: Driver PIN login → returns JWT ─────────────────────
 app.post("/api/driver-login", (req, res) => {
   const { pin } = req.body;
-  if (!pin || pin !== DRIVER_PIN) {
+  const safePin = String(pin || "").trim();
+  const serverPin = String(DRIVER_PIN || "").trim();
+  if (!safePin || safePin !== serverPin) {
     return res.status(401).json({ error: "Invalid PIN" });
   }
   const token = jwt.sign({ role: "driver" }, JWT_SECRET, { expiresIn: "8h" });
@@ -240,7 +242,7 @@ wss.on("connection", (ws) => {
         };
         pendingRequests.set(requestId, requestData);
         const reqPayload = {
-          type: "newRequest",
+          type: data.type,
           requestId,
           requestType: data.type,
           userId: data.userId,
@@ -380,7 +382,7 @@ wss.on("connection", (ws) => {
         }
 
         const reqPayload = {
-          type: "ambulanceRequest",
+          type: "emergency",
           requestId,
           userId: data.userId,
           lat: data.lat,

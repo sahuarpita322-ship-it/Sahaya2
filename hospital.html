@@ -48,12 +48,25 @@
 
     <section aria-label="Hospital list" style="margin-top:14px;">
       <div class="card">
-        <p class="section-title">Filter by type</p>
-        <select id="typeFilter" onchange="filterHospitals()">
-          <option value="all">All Hospitals</option>
-          <option value="Government">Government</option>
-          <option value="Private">Private</option>
-        </select>
+        <p class="section-title">Search Hospitals in India</p>
+        
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+          <input type="text" id="citySearch" placeholder="Enter city (e.g. Pune)" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e0; font-family: 'Poppins', sans-serif; font-size: 14px;">
+          <button onclick="searchCityHospitals()" style="background: #3182ce; color: white; padding: 10px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 14px;">Search</button>
+        </div>
+
+        <button onclick="findNearestHospitals()" style="width: 100%; background: #48bb78; color: white; padding: 14px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; margin-bottom: 15px; font-size: 15px; box-shadow: 0 4px 10px rgba(72, 187, 120, 0.3);">
+          📍 Find Nearest Best Hospitals
+        </button>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-top: 10px; border-top: 1px solid #edf2f7;">
+          <p class="section-title" style="margin: 0; font-size: 15px;">Filter by type</p>
+          <select id="typeFilter" onchange="applyFilters()" style="padding: 8px; border-radius: 8px; border: 1px solid #cbd5e0; outline: none; font-family: 'Poppins', sans-serif;">
+            <option value="all">All Hospitals</option>
+            <option value="Government">Government</option>
+            <option value="Private">Private</option>
+          </select>
+        </div>
         <div id="hospitalList"></div>
       </div>
     </section>

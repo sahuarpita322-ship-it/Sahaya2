@@ -622,6 +622,7 @@
 
     // Get WebSocket URL dynamically
     function getWebSocketURL() {
+      if (window.location.protocol === "file:") return "ws://localhost:5500";
       const WS_PROTOCOL = window.location.protocol === "https:" ? "wss:" : "ws:";
       const WS_PORT = window.location.port ? `:${window.location.port}` : "";
       return `${WS_PROTOCOL}//${window.location.hostname}${WS_PORT}`;
@@ -684,6 +685,17 @@
           } else if (data.type === 'linkDriverUser') {
             console.log(`[TRACK] 🚑 Starting tracking: Patient ${data.userId}, Driver ${data.driverId}`);
             startTrackingPair(data.userId, data.driverId, data.lat, data.lng);
+          } else if (data.type === 'hazardReported') {
+            console.log('[TRACK] 🚧 Hazard received:', data);
+            if (data.lat && data.lng) {
+              L.marker([data.lat, data.lng], {
+                icon: L.divIcon({ 
+                  html: '<div style="font-size: 20px; background: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">⚠️</div>', 
+                  className: 'custom-marker', 
+                  iconSize: [28, 28] 
+                })
+              }).addTo(map).bindPopup(`<b>🚧 Road Hazard:</b><br>${data.description}`);
+            }
           }
         } catch (err) {
           console.error('[TRACK] ❌ Error parsing message:', err);
