@@ -36,7 +36,7 @@ A professional, Uber-style real-time location tracking web application built wit
 1. **Environment Variables**
    Create a `.env` file in the root directory (this is already in `.gitignore`):
    ```env
-   PORT=5000
+   PORT=5500
    DRIVER_PIN=1234
    JWT_SECRET=sahaya_super_secret_change_this_in_prod
    NODE_ENV=development
@@ -52,13 +52,13 @@ A professional, Uber-style real-time location tracking web application built wit
    - The server resolves your local IP address automatically.
    - Open your browser and navigate to:
      - **Homepage**: `http://localhost:5000/`
-     - **Share Page**: `http://localhost:5000/share.html`
-     - **Track Page**: `http://localhost:5000/track.html`
-     - **Driver Dashboard**: `http://localhost:5000/driver.html` (Requires PIN: `1234`)
+     - **Share Page**: `http://localhost:5500/share.html`
+     - **Track Page**: `http://localhost:5500/track.html`
+     - **Driver Dashboard**: `http://localhost:5500/driver.html` (Requires PIN: `1234`)
 
 4. **For Same WiFi Testing**
    - Use the network IP address (e.g., `http://192.168.1.100:5000/`)
-   - Open on multiple devices connected to the same WiFi
+   - Use the network IP address (e.g., `http://192.168.1.100:5500/`)
 
 ## � Deployment (Railway & Render)
 

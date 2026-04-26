@@ -17,9 +17,9 @@ You'll see output like:
 ==================================================
 🚀 Location Tracking Server Running
 ==================================================
-📱 Local:   http://localhost:3000
-🌐 Network: http://192.168.1.100:3000
-🔌 WebSocket: ws://192.168.1.100:3000
+📱 Local:   http://localhost:5500
+🌐 Network: http://192.168.1.100:5500
+🔌 WebSocket: ws://192.168.1.100:5500
 ==================================================
 ```
 
@@ -32,7 +32,7 @@ Make sure both phones are connected to the same WiFi network as your computer.
 ### Step 4: On Phone 1 (Sharer)
 
 1. Open browser on Phone 1
-2. Go to: `http://192.168.1.100:3000/share` (use the IP from Step 2)
+2. Go to: `http://192.168.1.100:5500/share` (use the IP from Step 2)
 3. Enter a name (e.g., "Alice")
 4. Click "Start Live Sharing"
 5. Allow location permissions when prompted
@@ -46,7 +46,7 @@ Make sure both phones are connected to the same WiFi network as your computer.
 ### Step 5: On Phone 2 (Tracker)
 
 1. Open browser on Phone 2
-2. Go to: `http://192.168.1.100:3000/track` (use the IP from Step 2)
+2. Go to: `http://192.168.1.100:5500/track` (use the IP from Step 2)
 3. You should see the map load
 4. Wait a few seconds
 5. You should see Phone 1's location appear as a marker on the map
@@ -92,10 +92,10 @@ Make sure both phones are connected to the same WiFi network as your computer.
 **On Phone:**
 - Make sure you're using the Network IP (not localhost)
 - Check firewall settings on your computer
-- Try accessing `http://192.168.1.100:3000/share` first to verify connection
+- Try accessing `http://192.168.1.100:5500/share` first to verify connection
 
 **On Computer:**
-- Check Windows Firewall allows port 3000
+- Check Windows Firewall allows port 5500
 - Make sure server is running
 - Check server console for connection logs
 

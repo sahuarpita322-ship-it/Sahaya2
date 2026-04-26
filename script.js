@@ -765,7 +765,16 @@ function initDispatchUI(){
       // create dispatch
       const d = createDispatch(service.replace(/[^a-zA-Z ]/g,'').trim().toLowerCase());
       showDispatchTracker(d.id);
-      alert('Dispatch requested. Share this link with the responder:\n' + window.location.origin + '/driver.html?dispatch=' + d.id);
+      
+      // Show green success message instead of alert
+      const msgEl = document.createElement('div');
+      msgEl.textContent = '✅ Request has been sent to nearby ambulance!';
+      msgEl.style.cssText = 'background: #4caf50; color: white; padding: 10px; border-radius: 5px; margin-top: 10px; text-align: center; font-weight: bold; animation: fadeIn 0.3s;';
+      card.appendChild(msgEl);
+      
+      setTimeout(() => {
+        msgEl.remove();
+      }, 5000);
     });
   });
 
