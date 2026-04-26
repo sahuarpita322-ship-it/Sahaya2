@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emergency Numbers — Sahaya</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="modern-style.css">
+</head>
+<body data-page="emergency">
+
+  <!-- Header -->
+  <header style="text-align: center; padding: 20px; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <h1 class="app-title">
+      Emergency Numbers
+      <span style="display: block; font-size: 14px; font-weight: normal; color: #666; margin-top: 5px;">Tap a card and then call on your phone</span>
+    </h1>
+    
+    <div style="margin-top: 15px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+      <button id="voiceBtn" style="padding: 8px 12px; border-radius: 20px; border: 1px solid #ccc; background: #f8f9fa; cursor: pointer;">🔊 Listen instructions</button>
+      <a href="index.html" style="padding: 8px 12px; border-radius: 20px; border: none; background: #e2e8f0; color: #2d3748; text-decoration: none; font-weight: bold;">🏠 Home</a>
+    </div>
+
+    <div class="language-buttons" style="margin-top: 15px; display: flex; justify-content: center; gap: 10px;">
+      <button onclick="setLanguage('en')" style="padding: 5px 15px; cursor: pointer;">English</button>
+      <button onclick="setLanguage('hi')" style="padding: 5px 15px; cursor: pointer;">हिंदी</button>
+      <button onclick="setLanguage('or')" style="padding: 5px 15px; cursor: pointer;">ଓଡ଼ିଆ</button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main style="padding: 20px; max-width: 1000px; margin: 0 auto;">
+    <div class="grid-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+      
+      <!-- 112 National Emergency -->
+      <div class="card contact-card" style="border-left: 5px solid #e53e3e; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center;">
+        <h2 style="margin-bottom: 5px; font-size: 20px;">National Emergency</h2>
+        <p style="color: #666; font-size: 14px; margin-bottom: 15px;">All-in-one emergency helpline</p>
+        <h1 style="color: #e53e3e; font-size: 36px; margin: 10px 0;">112</h1>
+        <button onclick="callNumber('112')" class="ripple" style="width: 100%; background: #e53e3e; color: white; padding: 15px; border: none; border-radius: 8px; font-weight: bold; font-size: 18px; cursor: pointer; transition: transform 0.2s;">📞 Tap to Call</button>
+      </div>
+      
+      <!-- 108 Ambulance -->
+      <div class="card contact-card" style="border-left: 5px solid #dd6b20; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center;">
+        <h2 style="margin-bottom: 5px; font-size: 20px;">Ambulance</h2>
+        <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Medical emergencies & accidents</p>
+        <h1 style="color: #dd6b20; font-size: 36px; margin: 10px 0;">108</h1>
+        <button onclick="callNumber('108')" class="ripple" style="width: 100%; background: #dd6b20; color: white; padding: 15px; border: none; border-radius: 8px; font-weight: bold; font-size: 18px; cursor: pointer; transition: transform 0.2s;">🚑 Tap to Call</button>
+      </div>
+      
+      <!-- 100 Police -->
+      <div class="card contact-card" style="border-left: 5px solid #3182ce; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center;">
+        <h2 style="margin-bottom: 5px; font-size: 20px;">Police</h2>
+        <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Crime, violence, or security threats</p>
+        <h1 style="color: #3182ce; font-size: 36px; margin: 10px 0;">100</h1>
+        <button onclick="callNumber('100')" class="ripple" style="width: 100%; background: #3182ce; color: white; padding: 15px; border: none; border-radius: 8px; font-weight: bold; font-size: 18px; cursor: pointer; transition: transform 0.2s;">🚓 Tap to Call</button>
+      </div>
+
+      <!-- 101 Fire & Rescue -->
+      <div class="card contact-card" style="border-left: 5px solid #d69e2e; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center;">
+        <h2 style="margin-bottom: 5px; font-size: 20px;">Fire & Rescue</h2>
+        <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Fire outbreaks and rescue operations</p>
+        <h1 style="color: #d69e2e; font-size: 36px; margin: 10px 0;">101</h1>
+        <button onclick="callNumber('101')" class="ripple" style="width: 100%; background: #d69e2e; color: white; padding: 15px; border: none; border-radius: 8px; font-weight: bold; font-size: 18px; cursor: pointer; transition: transform 0.2s;">🚒 Tap to Call</button>
+      </div>
+
+      <!-- 1091 Women Helpline -->
+      <div class="card contact-card" style="border-left: 5px solid #805ad5; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center;">
+        <h2 style="margin-bottom: 5px; font-size: 20px;">Women Helpline</h2>
+        <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Domestic abuse or harassment</p>
+        <h1 style="color: #805ad5; font-size: 36px; margin: 10px 0;">1091</h1>
+        <button onclick="callNumber('1091')" class="ripple" style="width: 100%; background: #805ad5; color: white; padding: 15px; border: none; border-radius: 8px; font-weight: bold; font-size: 18px; cursor: pointer; transition: transform 0.2s;">👩 Tap to Call</button>
+      </div>
+
+      <!-- 1098 Child Helpline -->
+      <div class="card contact-card" style="border-left: 5px solid #38a169; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center;">
+        <h2 style="margin-bottom: 5px; font-size: 20px;">Child Helpline</h2>
+        <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Child abuse, labor, or abandonment</p>
+        <h1 style="color: #38a169; font-size: 36px; margin: 10px 0;">1098</h1>
+        <button onclick="callNumber('1098')" class="ripple" style="width: 100%; background: #38a169; color: white; padding: 15px; border: none; border-radius: 8px; font-weight: bold; font-size: 18px; cursor: pointer; transition: transform 0.2s;">🧒 Tap to Call</button>
+      </div>
+      
+      <!-- 1078 Disaster Management -->
+      <div class="card contact-card" style="border-left: 5px solid #718096; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center;">
+        <h2 style="margin-bottom: 5px; font-size: 20px;">Disaster Relief</h2>
+        <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Natural disasters management</p>
+        <h1 style="color: #718096; font-size: 36px; margin: 10px 0;">1078</h1>
+        <button onclick="callNumber('1078')" class="ripple" style="width: 100%; background: #718096; color: white; padding: 15px; border: none; border-radius: 8px; font-weight: bold; font-size: 18px; cursor: pointer; transition: transform 0.2s;">🌪️ Tap to Call</button>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="script.js"></script>
+  <script src="modern-script.js"></script>
+</body>
+</html>
